@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Stable Diffusion Design Assistant</title>
+  <style>
+    input {
+      width: 100%;
+      height: 40px;
+    }
+
+    .radio {
+      width: 20px;
+      height: 20px;
+    }
+
+    .size {
+      width: 50%;
+    }
+
+    img {
+      width: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <p>Prompt:</p>
+  <input id="prompt" type="text" placeholder="Enter a prompt" />
+  <!-- <p>Negative Prompt:</p> -->
+  <!-- <input id="negPrompt" type="text" placeholder="Enter a negative prompt" /> -->
+  <p>Size:</p>
+  <input type="radio" id="option1" class="radio" name="group" value="option1"> <label for="option1">512x512</label>
+  <input type="radio" id="option11" class="radio" name="group" value="option11"> <label
+    for="option11">768x768</label><br>
+  <input type="radio" id="option2" class="radio" name="group" value="option2"> <label for="option2">768x512</label>
+  <input type="radio" id="option3" class="radio" name="group" value="option3"> <label for="option3">960x512</label><br>
+  <input type="radio" id="option4" class="radio" name="group" value="option4"> <label for="option4">512x768</label>
+  <input type="radio" id="option5" class="radio" name="group" value="option5"> <label for="option5">512x960</label><br>
+  <input type="text" class="size" id="width" value="512"><input type="text" class="size" id="height" value="512">
+  <p></p>
+  <button id="txt2img">Text 2 Image</button>
+  <button id="cancel">Cancel</button>
+  <p></p>
+  <input type="button" id="svg" name="svg" value="Generate SVG"/>
+</body>
+
+</html>
+<script src="https://cdn.jsdelivr.net/npm/imagetracerjs@1.2.6/imagetracer_v1.2.6.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/simplify-js@1.2.4/simplify.min.js"></script>
+<script>
+  const txt2imgButton = document.getElementById('txt2img');
+  document.querySelectorAll(".radio").forEach((radio) => {
+    radio.addEventListener("change", (e) => {
+      if (e.target.value === "option1") {
+        document.getElementById('width').value = 512;
+        document.getElementById('height').value = 512;
+      }
+      if (e.target.value === "option11") {
+        document.getElementById('width').value = 768;
+        document.getElementById('height').value = 768;
+      }
+      if (e.target.value === "option2") {
+        document.getElementById('width').value = 768;
+        document.getElementById('height').value = 512;
+      }
+      if (e.target.value === "option3") {
+        document.getElementById('width').value = 960;
+        document.getElementById('height').value = 512;
+      }
+      if (e.target.value === "option4") {
+        document.getElementById('width').value = 512;
+        document.getElementById('height').value = 768;
+      }
+      if (e.target.value === "option5") {
+        document.getElementById('width').value = 512;
+        document.getElementById('height').value = 960;
+      }
+    });
+  });
+  document.getElementById('txt2img').onclick = (e) => {
+    txt2img();
+  }
+  document.querySelector("#svg").addEventListener("click", (e) => {
+    parent.postMessage({ pluginMessage: { type: 'get_selected_image' } }, '*')
+  });
+
+  document.getElementById('cancel').onclick = () => {
+    parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*')
+  }
+
+  window.addEventListener('message', event => {
+    if (event.data && event.data.pluginMessage.type === 'api_results') {
+      let byte_array = _base64ToUint8Array(event.data.pluginMessage.data);
+      const url = URL.createObjectURL(new Blob([byte_array], { type: 'image/png' }));
+      parent.postMessage({ pluginMessage: { type: 'preview', byte_array } }, '*')
+    }
+    if (event.data && event.data.pluginMessage.type === 'done') {
+      txt2imgButton.disabled = false;
+    }
+    if (event.data && event.data.pluginMessage.type === 'selected_image') {
+      generate_svg();
+    }
+  });
+
+  window.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+      parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*')
+    }
+    if (event.key === "Enter") {
+      txt2img()
+    }
+  });
+  function generate_svg(){
+    let binary = '';
+    event.data.pluginMessage.data.forEach(byte => binary += String.fromCharCode(byte));
+    const base64String = btoa(binary);
+    const url = `data:image/png;base64,${base64String}`
+    const img = document.createElement('img');
+    img.src = url;
+    ImageTracer.imageToSVG(url, function (svgstr) {
+        const width_input = document.getElementById('width');
+        const height_input = document.getElementById('height');
+        let width = width_input.value;
+        let height = height_input.value;
+        console.log(svgstr)
+        parent.postMessage({ pluginMessage: { type: 'create_node_from_svg', svgstr,width,height } }, '*')
+      },'smoothed');
+
+  }
+  function txt2img() {
+    if (txt2imgButton.disabled) {
+      return;
+    }
+    const textbox_prompt = document.getElementById('prompt');
+    const width_input = document.getElementById('width');
+    const height_input = document.getElementById('height');
+    let prompt = textbox_prompt.value;
+    let width = width_input.value;
+    let height = height_input.value;
+    parent.postMessage({ pluginMessage: { type: 'txt2img', prompt, width, height } }, '*')
+    txt2imgButton.disabled = true;
+  }
+  function _base64ToUint8Array(base64) {
+    var binary_string = window.atob(base64);
+    var len = binary_string.length;
+    var bytes = new Uint8Array(len);
+    for (var i = 0; i < len; i++) {
+      bytes[i] = binary_string.charCodeAt(i);
+    }
+    return new Uint8Array(bytes.buffer);
+  }
+</script>
