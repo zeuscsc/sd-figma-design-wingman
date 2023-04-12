@@ -1,4 +1,4 @@
-let url="http://localhost:7680"
+let url="";
 const default_bad_prompt="text, logo, signature, over-saturated, over-exposed, amateur, extra limbs, extra barrel, b&w, close-up, duplicate, mutilated, extra fingers, mutated hands, deformed, blurry, bad proportions, extra limbs, cloned face, out of frame, bad anatomy, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, mutated hands, fused fingers, too many fingers, long neck, tripod, tube, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, mutation, mutated, extra limbs, extra legs, extra arms, disfigured, deformed, cross-eye, body out of frame, blurry, bad art, bad anatomy, nfixer"
 figma.showUI(__html__, { width: 320, height: 720 });
 figma.ui.onmessage = async msg => {
@@ -21,6 +21,13 @@ figma.ui.onmessage = async msg => {
     if(msg.type==="prompt_mask") prompt_mask(imageUrl,prompt,width,height,style);
     if(msg.type==="vectors_2_image")vectors_2_image(imageUrl,prompt,width,height,style,vectors_guidance);
   }
+  if(msg.type==="render_sketch"){
+    let width = figma.currentPage.selection[0].width;
+    let height = figma.currentPage.selection[0].height;
+    let style = msg.style;
+
+  }
+
   if (msg.type === 'create_image_node') {
     create_image_node(msg.original_task,msg.byte_array);
   }
@@ -55,7 +62,7 @@ figma.on('selectionchange', () => {
 });
 function initialize(){
   const selection = figma.currentPage.selection;
-  figma.ui.postMessage({ type: 'sync_img2img_ui', selected_nodes_count: selection.length });
+  figma.ui.postMessage({ type: 'on_initialized', selected_nodes_count: selection.length });
 }
 initialize()
 
@@ -178,9 +185,9 @@ function get_styled_prompt(prompt:string,style:string){
     case "photo":
       prompt = `.photo realistic, ultra details, natural light,
       ${prompt}
-      ,(rim lighting,:1.4) two tone lighting,  octane, unreal, dimly lit, low key,
-      , digital art, (photo, studio lighting, hard light, high contrast lighting
-      sony a7, 50 mm, hyperrealistic, big depth of field, concept art, colors, hyperdetailed, hyperrealistic) , ((moody lighting)), (fog), (ambient light)
+      ,  octane, dimly lit, low key,
+      , digital art, (photo,
+      sony a7, 50 mm, hyperrealistic, big depth of field, colors, hyperdetailed, hyperrealistic) , ((moody lighting)), (ambient light)
       `;
       break;
     case "icon":
@@ -197,10 +204,13 @@ function get_styled_prompt(prompt:string,style:string){
       ,(((lineart))),((low detail)),(simple),high contrast,sharp,2 bit,(((gothic ink on paper))),H.P. Lovecraft,Arthur Rackham
       `
       break;
-    case "cartoon":
-      prompt = `${prompt}
-      ,cartoon
-      `
+    case "studio":
+      prompt = `.photo realistic, ultra details, natural light,
+      ${prompt}
+      ,(rim lighting,:1.4) two tone lighting,  octane, unreal, dimly lit, low key,
+      , digital art, (photo, studio lighting, hard light, high contrast lighting
+      sony a7, 50 mm, hyperrealistic, big depth of field, concept art, colors, hyperdetailed, hyperrealistic) , ((moody lighting)), (fog), (ambient light)
+      `;
       break;
     default:
       break;
@@ -234,4 +244,101 @@ async function create_image_node(original_task:string,byte_array: Uint8Array) {
 async function get_selected_image() {
   if (figma.currentPage.selection.length === 0) return
   return await figma.currentPage.selection[0].exportAsync({ format: "PNG", constraint: { type: "SCALE", value: 1 } })
+}
+function encodeURIComponent(input: string): string {
+  const hexChars = '0123456789ABCDEF';
+  let output = '';
+
+  for (let i = 0; i < input.length; i++) {
+    const charCode = input.charCodeAt(i);
+
+    if (
+      (charCode >= 65 && charCode <= 90) || // A-Z
+      (charCode >= 97 && charCode <= 122) || // a-z
+      (charCode >= 48 && charCode <= 57) || // 0-9
+      charCode === 45 || // -
+      charCode === 95 || // _
+      charCode === 46 || // .
+      charCode === 126 // ~
+    ) {
+      output += input[i];
+    } else {
+      const hexCode = charCode.toString(16).toUpperCase();
+      output += `%${hexCode.length === 1 ? '0' : ''}${hexCode}`;
+    }
+  }
+
+  return output;
+}
+function btoa(input: string): string {
+  const base64Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+  let output = '';
+  let char1, char2, char3;
+  let enc1, enc2, enc3, enc4;
+  let i = 0;
+
+  input = encodeURIComponent(input);
+
+  do {
+    char1 = input.charCodeAt(i++);
+    char2 = input.charCodeAt(i++);
+    char3 = input.charCodeAt(i++);
+
+    enc1 = char1 >> 2;
+    enc2 = ((char1 & 3) << 4) | (char2 >> 4);
+    enc3 = ((char2 & 15) << 2) | (char3 >> 6);
+    enc4 = char3 & 63;
+
+    if (isNaN(char2)) {
+      enc3 = enc4 = 64;
+    } else if (isNaN(char3)) {
+      enc4 = 64;
+    }
+
+    output += base64Chars.charAt(enc1) + base64Chars.charAt(enc2) + base64Chars.charAt(enc3) + base64Chars.charAt(enc4);
+  } while (i < input.length);
+
+  return output;
+}
+function atob(input: string): string {
+  const base64Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+  let output = '';
+  let char1, char2, char3;
+  let enc1, enc2, enc3, enc4;
+  let i = 0;
+  input = input.replace(/\s/g, '');
+  const padding = input.length % 4;
+  if (padding > 0) {
+    input += '='.repeat(4 - padding);
+  }
+  do {
+    enc1 = base64Chars.indexOf(input.charAt(i++));
+    enc2 = base64Chars.indexOf(input.charAt(i++));
+    enc3 = base64Chars.indexOf(input.charAt(i++));
+    enc4 = base64Chars.indexOf(input.charAt(i++));
+
+    char1 = (enc1 << 2) | (enc2 >> 4);
+    char2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+    char3 = ((enc3 & 3) << 6) | enc4;
+
+    output += String.fromCharCode(char1);
+
+    if (enc3 !== 64) {
+      output += String.fromCharCode(char2);
+    }
+    if (enc4 !== 64) {
+      output += String.fromCharCode(char3);
+    }
+  } while (i < input.length);
+
+  return output;
+}
+function base64ToUint8Array(base64:string) {
+  var binary_string = atob(base64);
+  var len = binary_string.length;
+  var bytes = new Uint8Array(len);
+  for (var i = 0; i < len; i++) {
+    bytes[i] = binary_string.charCodeAt(i);
+  }
+  return new Uint8Array(bytes.buffer);
 }

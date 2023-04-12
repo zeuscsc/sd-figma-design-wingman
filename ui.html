@@ -9,12 +9,25 @@
       font: 1em sans-serif;
     }
 
+    h6 {
+      color: red;
+    }
+
+    h5 {
+      color: blue;
+    }
+
     input {
       width: 100%;
       height: 40px;
     }
 
     .radio {
+      width: 20px;
+      height: 20px;
+    }
+
+    .checkbox {
       width: 20px;
       height: 20px;
     }
@@ -61,9 +74,19 @@
 
 <body>
   <p>Stable Diffusion Hosting URL:</p>
-  <input id="url" type="text" placeholder="Enter a URL" value="http://localhost:7860" />
+  <input id="url" type="text" placeholder="Enter a Stable Diffusion Hosting URL" />
+  <div class="row">
+    <input type="button" id="connect2local" value="Connect to Local&#13;&#10;Stable Diffusion"
+      onclick="document.getElementById('url').value='http://localhost:7860';checkAvailibility()" />
+    <input type="button" id="connect2offical" value="Connect to Offical&#13;&#10;Stable Diffusion"
+      onclick="document.getElementById('url').value='https://sd.zeuschiu.com';checkAvailibility()" />
+  </div>
+  <h6 id="server_log"></h6>
+  <h5 id="connection_status"></h5>
   <p>Prompt:</p>
   <input id="prompt" type="text" placeholder="Enter a prompt" />
+  <input type="checkbox" class="checkbox" id="keep_generating_checkbox"><label for="keep_generating_checkbox">Keep
+    Generating</label>
   <table class="sizeSliders">
     <tr>
       <th>Width</th>
@@ -96,7 +119,7 @@
     <tr>
       <td><input type="radio" class="radio" name="style" value="sticker"><label for="style">Sticker</label></td>
       <td><input type="radio" class="radio" name="style" value="anime"><label for="style">Anime</label></td>
-      <td><input type="radio" class="radio" name="style" value="cartoon"><label for="style">Cartoon</label></td>
+      <td><input type="radio" class="radio" name="style" value="studio"><label for="style">Studio</label></td>
     </tr>
   </table>
   <div class="">
@@ -112,7 +135,7 @@
     </datalist>
   </div>
   <div class="row">
-    <input type="button" id="txt2img" value="Text 2 Image" />
+    <input type="button" id="txt2img" disabled value="Text 2 Image" />
   </div>
   <div class="row">
     <input type="button" id="auto_mask" disabled value="Auto&#13;&#10;Background Removal" />
@@ -120,7 +143,7 @@
   </div>
   <div class="row">
     <input type="button" id="image_2_vectors" disabled value="Image 2 Vectors" />
-    <input type="button" id="vectors_2_image" disabled value="Vectors 2 Image" />
+    <input type="button" id="vectors_2_image" disabled value="Render Sketch" />
   </div>
   <div class="row">
     <input type="button" id="find_items" disabled value="Find Items" />
@@ -132,9 +155,25 @@
 <script src="https://cdn.jsdelivr.net/npm/imagetracerjs@1.2.6/imagetracer_v1.2.6.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/simplify-js@1.2.4/simplify.min.js"></script>
 <script>
+  const urlInput = document.getElementById('url');
   const txt2imgButton = document.getElementById('txt2img');
-  const vectors_2_imageButton = document.getElementById('vectors_2_image');
+  const renderSketchButton = document.getElementById('vectors_2_image');
+  const autoMaskButton = document.getElementById('auto_mask');
+  const promptMaskButton = document.getElementById('prompt_mask');
+  const image_2_vectorsButton = document.getElementById('image_2_vectors');
+  const findItemsButton = document.getElementById('find_items');
+  const serverLogLabel = document.getElementById('server_log');
+  const connectionStatusLabel = document.getElementById('connection_status');
+  const keepGeneratingCheckbox = document.getElementById('keep_generating_checkbox');
   let progressInterval = null;
+  let sdServerAvailable = false;
+  let autoMaskAvailable = false;
+  let promptMaskAvailable = false;
+  let controlNetAvailable = false;
+  let generatingImage = false;
+  let selected_nodes_count = 0;
+  const checkAvailibilityDebouncedHandleInputValueChange = debounce(checkAvailibility, 500);
+  urlInput.addEventListener('input', checkAvailibilityDebouncedHandleInputValueChange);
   document.getElementById('txt2img').onclick = (e) => {
     txt2img();
   }
@@ -184,7 +223,11 @@
       on_selected_image(event.data.pluginMessage.original_task, event.data.pluginMessage.data);
     }
     if (event.data && event.data.pluginMessage.type === 'sync_img2img_ui') {
-      on_sync_img2img_ui(event.data.pluginMessage.selected_nodes_count);
+      setUiAvailiability(event.data.pluginMessage.selected_nodes_count);
+    }
+    if (event.data && event.data.pluginMessage.type === 'on_initialized') {
+      checkAvailibility();
+      selected_nodes_count = event.data.pluginMessage.selected_nodes_count;
     }
   });
 
@@ -193,19 +236,25 @@
       parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*')
     }
     if (event.key === "Enter") {
+      vectors_2_image()
+    }
+    if (event.shiftKey && event.key === "Enter") {
       txt2img()
     }
   });
 
   async function on_done(original_task) {
+    txt2imgButton.disabled = false;
+    renderSketchButton.disabled = false;
+    generatingImage = false;
     switch (original_task) {
       case "txt2img":
-        txt2imgButton.disabled = false;
         document.getElementById('progress').value = 1;
+        if (keepGeneratingCheckbox.checked) txt2img();
         break;
       case "vectors_2_image":
-        vectors_2_imageButton.disabled = false;
         document.getElementById('progress').value = 1;
+        if (keepGeneratingCheckbox.checked) vectors_2_image();
         break;
     }
   }
@@ -244,7 +293,7 @@
     let prompt = textbox_prompt.value;
     let width = width_input.value;
     let height = height_input.value;
-    const pluginMessage = { type: original_task, imageUrl: base64, prompt, width, height, style, url,vectors_guidance }
+    const pluginMessage = { type: original_task, imageUrl: base64, prompt, width, height, style, url, vectors_guidance }
     parent.postMessage({ pluginMessage }, '*')
   }
   function image_2_vectors(data) {
@@ -277,15 +326,17 @@
     let width = width_input.value;
     let height = height_input.value;
     parent.postMessage({ pluginMessage: { type: 'txt2img', prompt, width, height, style, url } }, '*')
-    txt2imgButton.disabled = true;
+    generatingImage = true;
+    setUiAvailiability();
     progressInterval = setInterval(getProgress, 1000);
   }
   function vectors_2_image() {
-    if (vectors_2_imageButton.disabled) {
+    if (renderSketchButton.disabled) {
       return;
     }
-    vectors_2_imageButton.disabled = true;
-    parent.postMessage({ pluginMessage: { type: 'get_selected_image', original_task: "vectors_2_image" } }, '*')
+    parent.postMessage({ pluginMessage: { type: 'get_selected_image', original_task: "vectors_2_image" } }, '*');
+    generatingImage = true;
+    setUiAvailiability();
     progressInterval = setInterval(getProgress, 1000);
   }
   function _base64ToUint8Array(base64) {
@@ -310,19 +361,76 @@
       document.getElementById('progress').value = 1;
     }
   }
-  function on_sync_img2img_ui(selected_nodes_count) {
+  function setUiAvailiability(selected_nodes_count = 0) {
+    serverLogLabel.innerHTML = "";
+    if (!sdServerAvailable) { txt2imgButton.disabled = true; serverLogLabel.innerHTML += "Can't connect to server<br>" } else txt2imgButton.disabled = false;
+    if (!autoMaskAvailable) { autoMaskButton.disabled = true; serverLogLabel.innerHTML += "Can't find auto mask extension<br>" }
+    if (!promptMaskAvailable) { promptMaskButton.disabled = true; serverLogLabel.innerHTML += "Can't find prompt mask extension<br>" }
+    if (!controlNetAvailable) { renderSketchButton.disabled = true; serverLogLabel.innerHTML += "Can't find control net extension<br>" }
+
     if (selected_nodes_count == 0) {
-      document.getElementById('image_2_vectors').disabled = true;
-      document.getElementById('auto_mask').disabled = true;
-      document.getElementById('prompt_mask').disabled = true;
-      document.getElementById('vectors_2_image').disabled = true;
-      document.getElementById('find_items').disabled = true;
-    } else {
-      document.getElementById('image_2_vectors').disabled = false;
-      document.getElementById('auto_mask').disabled = false;
-      document.getElementById('prompt_mask').disabled = false;
-      document.getElementById('vectors_2_image').disabled = false;
-      document.getElementById('find_items').disabled = false;
+      autoMaskButton.disabled = true;
+      promptMaskButton.disabled = true;
+      renderSketchButton.disabled = true;
+      image_2_vectorsButton.disabled = true;
+      findItemsButton.disabled = true;
+    } else if (selected_nodes_count > 0) {
+      image_2_vectorsButton.disabled = false;
+      findItemsButton.disabled = false;
+      if (autoMaskAvailable) autoMaskButton.disabled = false;
+      if (promptMaskAvailable) promptMaskButton.disabled = false;
+      if (controlNetAvailable) renderSketchButton.disabled = false;
+    }
+    if (generatingImage) {
+      txt2imgButton.disabled = true;
+      renderSketchButton.disabled = true;
+    }
+  }
+  async function login() {
+    const url = document.getElementById('url').value;
+    let res = await fetch(`${url}/sdapi/v1/login`, {
+      method: "POST",
+      body: JSON.stringify({
+        username: document.getElementById('username').value,
+        password: document.getElementById('password').value
+      })
+    })
+    let data = await res.json();
+    if (data.status == "ok") {
+    }
+  }
+  async function apiHaveResponse(url) {
+    try {
+      let res = await fetch(url)
+      if (res.status === 200) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (e) {
+      // console.log(e)
+      return false;
+    }
+  }
+  async function checkAvailibility() {
+    const url = urlInput.value;
+    connectionStatusLabel.innerHTML = "Checking connection...";
+    sdServerAvailable = await apiHaveResponse(`${url}/app_id/`);
+    autoMaskAvailable = await apiHaveResponse(`${url}/auto_mask/status`);
+    promptMaskAvailable = await apiHaveResponse(`${url}/prompt_mask/status`);
+    controlNetAvailable = await apiHaveResponse(`${url}/controlnet/version`);
+    setUiAvailiability(selected_nodes_count);
+    connectionStatusLabel.innerHTML = "";
+  }
+  function debounce(func, delay) {
+    let timeoutId;
+    return function () {
+      const context = this;
+      const args = arguments;
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        func.apply(context, args);
+      }, delay);
     }
   }
 </script>
