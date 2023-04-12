@@ -76,9 +76,9 @@
   <p>Stable Diffusion Hosting URL:</p>
   <input id="url" type="text" placeholder="Enter a Stable Diffusion Hosting URL" />
   <div class="row">
-    <input type="button" id="connect2local" value="Connect to Local&#13;&#10;Stable Diffusion"
+    <input type="button" id="connect2local" value="Connect to&#13;&#10;Local Server"
       onclick="document.getElementById('url').value='http://localhost:7860';checkAvailibility()" />
-    <input type="button" id="connect2offical" value="Connect to Offical&#13;&#10;Stable Diffusion"
+    <input type="button" id="connect2offical" value="Connect to&#13;&#10;Demo Server"
       onclick="document.getElementById('url').value='https://sd.zeuschiu.com';checkAvailibility()" />
   </div>
   <h6 id="server_log"></h6>
@@ -247,6 +247,8 @@
     txt2imgButton.disabled = false;
     renderSketchButton.disabled = false;
     generatingImage = false;
+    clearInterval(progressInterval);
+    document.getElementById('progress').value = 1;
     switch (original_task) {
       case "txt2img":
         document.getElementById('progress').value = 1;
@@ -363,7 +365,7 @@
   }
   function setUiAvailiability(selected_nodes_count = 0) {
     serverLogLabel.innerHTML = "";
-    if (!sdServerAvailable) { txt2imgButton.disabled = true; serverLogLabel.innerHTML += "Can't connect to server<br>" } else txt2imgButton.disabled = false;
+    if (!sdServerAvailable) { txt2imgButton.disabled = true; serverLogLabel.innerHTML += "Not connected to any server yet<br>Try pressing the connect to demo server button<br>" } else txt2imgButton.disabled = false;
     if (!autoMaskAvailable) { autoMaskButton.disabled = true; serverLogLabel.innerHTML += "Can't find auto mask extension<br>" }
     if (!promptMaskAvailable) { promptMaskButton.disabled = true; serverLogLabel.innerHTML += "Can't find prompt mask extension<br>" }
     if (!controlNetAvailable) { renderSketchButton.disabled = true; serverLogLabel.innerHTML += "Can't find control net extension<br>" }
@@ -384,19 +386,6 @@
     if (generatingImage) {
       txt2imgButton.disabled = true;
       renderSketchButton.disabled = true;
-    }
-  }
-  async function login() {
-    const url = document.getElementById('url').value;
-    let res = await fetch(`${url}/sdapi/v1/login`, {
-      method: "POST",
-      body: JSON.stringify({
-        username: document.getElementById('username').value,
-        password: document.getElementById('password').value
-      })
-    })
-    let data = await res.json();
-    if (data.status == "ok") {
     }
   }
   async function apiHaveResponse(url) {
