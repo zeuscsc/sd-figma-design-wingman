@@ -56,6 +56,10 @@
       vertical-align: left;
     }
 
+    .image2vectors2imageTable {
+      font-size: x-small;
+    }
+
     img {
       width: 100%;
     }
@@ -64,6 +68,10 @@
       display: flex;
       flex-direction: row;
       justify-content: space-evenly;
+    }
+
+    #vectors_guidance_label {
+      font-size: medium;
     }
 
     progress {
@@ -93,14 +101,14 @@
       <th>Height</th>
     </tr>
     <tr>
-      <td><input type="text" class="size" id="width" value="512"></td>
-      <td><input type="text" class="size" id="height" value="512"></td>
+      <td><input type="text" class="size" id="width" value="768"></td>
+      <td><input type="text" class="size" id="height" value="768"></td>
     </tr>
     <tr>
-      <td><input type="range" class="size" id="width_slider" min="512" max="960" value="512" step="64"
+      <td><input type="range" class="size" id="width_slider" min="512" max="960" value="768" step="64"
           oninput="width_slider.value=parseInt(width_slider.value);document.getElementById('width').value=width_slider.value">
       </td>
-      <td><input type="range" class="size" id="height_slider" min="512" max="960" value="512" step="64"
+      <td><input type="range" class="size" id="height_slider" min="512" max="960" value="768" step="64"
           oninput="height_slider.value=parseInt(height_slider.value);document.getElementById('height').value=height_slider.value">
       </td>
     </tr>
@@ -122,18 +130,6 @@
       <td><input type="radio" class="radio" name="style" value="studio"><label for="style">Studio</label></td>
     </tr>
   </table>
-  <div class="">
-    <p></p>
-    <label id="vectors_guidance_label" for="vectors_guidance_slider">Vectors Guidance: Normal</label>
-    <input type="range" id="vectors_guidance_slider" min="0" max="2" value="1" step="0.5" list="vectors_guidance_data">
-    <datalist id="vectors_guidance_data">
-      <option value="0" label="None">
-      <option value="0.5" label="Free">
-      <option value="1" label="Normal">
-      <option value="1.5" label="Details">
-      <option value="2" label="Same">
-    </datalist>
-  </div>
   <div class="row">
     <input type="button" id="txt2img" disabled value="Text 2 Image" />
   </div>
@@ -141,6 +137,38 @@
     <input type="button" id="auto_mask" disabled value="Auto&#13;&#10;Background Removal" />
     <input type="button" id="prompt_mask" disabled value="Prompt&#13;&#10;Background Removal" />
   </div>
+  <table class="image2vectors2imageTable">
+    <tr>
+      <th></th>
+      <th></th>
+    </tr>
+    <tr>
+      <td><label id="canny_high_threshold_label" for="canny_high_threshold_slider">High Threshold: 200</label></td>
+      <td rowspan="2"><label id="vectors_guidance_label" for="vectors_guidance_slider">Vectors Guidance: Normal</label>
+      </td>
+    </tr>
+    <tr>
+      <td><input type="range" id="canny_high_threshold_slider" min="1" max="255" value="200" step="1"></td>
+    </tr>
+    <tr>
+      <td><label id="canny_low_threshold_label" for="canny_low_threshold_label">Low Threshold: 100</label></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td><input type="range" id="canny_low_threshold_slider" min="1" max="255" value="100" step="1"></td>
+      <td>
+        <input type="range" id="vectors_guidance_slider" min="0" max="2" value="1" step="0.25"
+          list="vectors_guidance_data">
+        <datalist id="vectors_guidance_data">
+          <option value="0" label="None">
+          <option value="0.5" label="Free">
+          <option value="1" label="Normal">
+          <option value="1.5" label="Details">
+          <option value="2" label="Same">
+        </datalist>
+      </td>
+    </tr>
+  </table>
   <div class="row">
     <input type="button" id="image_2_vectors" disabled value="Image 2 Vectors" />
     <input type="button" id="vectors_2_image" disabled value="Render Sketch" />
@@ -168,6 +196,7 @@
   let progressInterval = null;
   let sdServerAvailable = false;
   let autoMaskAvailable = false;
+  let figmaAvailable = false;
   let promptMaskAvailable = false;
   let controlNetAvailable = false;
   let generatingImage = false;
@@ -211,6 +240,12 @@
         break;
     }
   });
+  document.querySelector("#canny_high_threshold_slider").addEventListener("input", (e) => {
+    document.querySelector("#canny_high_threshold_label").textContent = `High Threshold: ${e.target.value}`;
+  });
+  document.querySelector("#canny_low_threshold_slider").addEventListener("input", (e) => {
+    document.querySelector("#canny_low_threshold_label").textContent = `Low Threshold: ${e.target.value}`;
+  });
 
   window.addEventListener('message', event => {
     if (event.data && event.data.pluginMessage.type === 'api_results') {
@@ -226,6 +261,10 @@
       setUiAvailiability(event.data.pluginMessage.selected_nodes_count);
     }
     if (event.data && event.data.pluginMessage.type === 'on_initialized') {
+      checkAvailibility();
+      selected_nodes_count = event.data.pluginMessage.selected_nodes_count;
+    }
+    if (event.data && event.data.pluginMessage.type === 'btoa') {
       checkAvailibility();
       selected_nodes_count = event.data.pluginMessage.selected_nodes_count;
     }
@@ -270,12 +309,15 @@
         byte_array = _base64ToUint8Array(data);
         parent.postMessage({ pluginMessage: { type: 'create_image_node', original_task, byte_array } }, '*')
         break;
+      case "get_canny":
+        image_2_vectors(data);
+        break;
     }
   }
   async function on_selected_image(original_task, data) {
     switch (original_task) {
       case "image_2_vectors":
-        image_2_vectors(data);
+        get_canny(data, original_task);
         break;
       case "auto_mask":
       case "prompt_mask":
@@ -298,11 +340,16 @@
     const pluginMessage = { type: original_task, imageUrl: base64, prompt, width, height, style, url, vectors_guidance }
     parent.postMessage({ pluginMessage }, '*')
   }
-  function image_2_vectors(data) {
-    let binary = '';
-    data.forEach(byte => binary += String.fromCharCode(byte));
-    const base64String = btoa(binary);
-    const url = `data:image/png;base64,${base64String}`
+  async function get_canny(data, original_task) {
+    var base64 = btoa(new Uint8Array(data).reduce((data, byte) => data + String.fromCharCode(byte), ''),);
+    const url = urlInput.value;
+    const canny_low_threshold = document.getElementById('canny_low_threshold_slider').value;
+    const canny_high_threshold = document.getElementById('canny_high_threshold_slider').value;
+    const pluginMessage = { type: "canny", original_task, imageUrl: base64, url, canny_low_threshold, canny_high_threshold }
+    parent.postMessage({ pluginMessage }, '*')
+  }
+  function image_2_vectors(base64String) {
+    let url = `data:image/png;base64,${base64String}`
     const img = document.createElement('img');
     img.src = url;
     ImageTracer.imageToSVG(url, function (svgstr) {
@@ -310,10 +357,8 @@
       const height_input = document.getElementById('height');
       let width = width_input.value;
       let height = height_input.value;
-      console.log(svgstr)
       parent.postMessage({ pluginMessage: { type: 'create_node_from_svg', svgstr, width, height } }, '*')
-    });
-
+    }, "posterized1");
   }
   function txt2img() {
     if (txt2imgButton.disabled) {
@@ -366,6 +411,7 @@
   function setUiAvailiability(selected_nodes_count = 0) {
     serverLogLabel.innerHTML = "";
     if (!sdServerAvailable) { txt2imgButton.disabled = true; serverLogLabel.innerHTML += "Not connected to any server yet<br>Try pressing the connect to demo server button<br>" } else txt2imgButton.disabled = false;
+    if (!figmaAvailable) { serverLogLabel.innerHTML += "Can't find figma extension<br>" }
     if (!autoMaskAvailable) { autoMaskButton.disabled = true; serverLogLabel.innerHTML += "Can't find auto mask extension<br>" }
     if (!promptMaskAvailable) { promptMaskButton.disabled = true; serverLogLabel.innerHTML += "Can't find prompt mask extension<br>" }
     if (!controlNetAvailable) { renderSketchButton.disabled = true; serverLogLabel.innerHTML += "Can't find control net extension<br>" }
@@ -397,7 +443,6 @@
         return false;
       }
     } catch (e) {
-      // console.log(e)
       return false;
     }
   }
@@ -406,10 +451,12 @@
     connectionStatusLabel.innerHTML = "Checking connection...";
     sdServerAvailable = await apiHaveResponse(`${url}/app_id/`);
     autoMaskAvailable = await apiHaveResponse(`${url}/auto_mask/status`);
+    figmaAvailable = await apiHaveResponse(`${url}/figma/status`);
     promptMaskAvailable = await apiHaveResponse(`${url}/prompt_mask/status`);
     controlNetAvailable = await apiHaveResponse(`${url}/controlnet/version`);
     setUiAvailiability(selected_nodes_count);
     connectionStatusLabel.innerHTML = "";
+    parent.postMessage({ pluginMessage: { type: 'check_availibility', original_task: "check_availibility" ,url} }, '*');
   }
   function debounce(func, delay) {
     let timeoutId;
