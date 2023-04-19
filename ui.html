@@ -31,6 +31,18 @@
       width: 20px;
       height: 20px;
     }
+    label {
+  display: flex;
+  align-items: center;
+    }
+    label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin-right: 5px;
+}
+label span {
+  line-height: 1.2;
+}
 
     .size {
       width: 100%;
@@ -56,6 +68,12 @@
       vertical-align: left;
     }
 
+    #mask_only{
+  width: 16px;
+  height: 16px;
+  margin-right: 5px;
+    }
+
     .image2vectors2imageTable {
       font-size: x-small;
     }
@@ -68,10 +86,6 @@
       display: flex;
       flex-direction: row;
       justify-content: space-evenly;
-    }
-
-    #vectors_guidance_label {
-      font-size: medium;
     }
 
     progress {
@@ -87,14 +101,16 @@
     <input type="button" id="connect2local" value="Connect to&#13;&#10;Local Server"
       onclick="document.getElementById('url').value='http://localhost:7860';checkAvailibility()" />
     <input type="button" id="connect2offical" value="Connect to&#13;&#10;Demo Server"
-      onclick="document.getElementById('url').value='https://sd.zeuschiu.com';checkAvailibility()" />
+      onclick="document.getElementById('url').value='https://sd.tecky.ai';checkAvailibility()" />
   </div>
   <h6 id="server_log"></h6>
   <h5 id="connection_status"></h5>
   <p>Prompt:</p>
   <input id="prompt" type="text" placeholder="Enter a prompt" />
-  <input type="checkbox" class="checkbox" id="keep_generating_checkbox"><label for="keep_generating_checkbox">Keep
-    Generating</label>
+  <div class="row">
+    <label><input type="checkbox" class="checkbox" id="keep_generating_checkbox"><span>Keep Generating</span></label>
+    <input id="seed" type="text" style="width: 45%;" placeholder="Seed" inputmode="numeric">
+  </div>
   <table class="sizeSliders">
     <tr>
       <th>Width</th>
@@ -144,15 +160,15 @@
     </tr>
     <tr>
       <td><label id="canny_high_threshold_label" for="canny_high_threshold_slider">High Threshold: 200</label></td>
-      <td rowspan="2"><label id="vectors_guidance_label" for="vectors_guidance_slider">Vectors Guidance: Normal</label>
-      </td>
+      <td><label><input type="checkbox" class="checkbox" id="mask_only"><span>Mask Only</span></label></td>
     </tr>
     <tr>
       <td><input type="range" id="canny_high_threshold_slider" min="1" max="255" value="200" step="1"></td>
+      <td ></td>
     </tr>
     <tr>
       <td><label id="canny_low_threshold_label" for="canny_low_threshold_label">Low Threshold: 100</label></td>
-      <td></td>
+      <td><label id="vectors_guidance_label" for="vectors_guidance_slider">Vectors Guidance: Normal</label></td>
     </tr>
     <tr>
       <td><input type="range" id="canny_low_threshold_slider" min="1" max="255" value="100" step="1"></td>
@@ -193,6 +209,7 @@
   const serverLogLabel = document.getElementById('server_log');
   const connectionStatusLabel = document.getElementById('connection_status');
   const keepGeneratingCheckbox = document.getElementById('keep_generating_checkbox');
+  const seedInput = document.getElementById('seed');
   let progressInterval = null;
   let sdServerAvailable = false;
   let autoMaskAvailable = false;
@@ -205,6 +222,12 @@
   urlInput.addEventListener('input', checkAvailibilityDebouncedHandleInputValueChange);
   document.getElementById('txt2img').onclick = (e) => {
     txt2img();
+  }
+  document.getElementById('seed').oninput = (e) => {
+    let seed=e.target.value;
+    if(seed !==""){
+      keepGeneratingCheckbox.checked = false;
+    }
   }
   document.querySelector("#image_2_vectors").addEventListener("click", (e) => {
     parent.postMessage({ pluginMessage: { type: 'get_selected_image', original_task: "image_2_vectors" } }, '*')
@@ -334,10 +357,13 @@
     const height_input = document.getElementById('height');
     const url = document.getElementById('url').value;
     const vectors_guidance = document.getElementById('vectors_guidance_slider').value;
+    const mask_only=document.getElementById('mask_only').checked;
+    
+    let seed=seedInput.value;
     let prompt = textbox_prompt.value;
     let width = width_input.value;
     let height = height_input.value;
-    const pluginMessage = { type: original_task, imageUrl: base64, prompt, width, height, style, url, vectors_guidance }
+    const pluginMessage = { type: original_task, imageUrl: base64, prompt, width, height, style, url, vectors_guidance,mask_only,seed }
     parent.postMessage({ pluginMessage }, '*')
   }
   async function get_canny(data, original_task) {
@@ -372,7 +398,8 @@
     let prompt = textbox_prompt.value;
     let width = width_input.value;
     let height = height_input.value;
-    parent.postMessage({ pluginMessage: { type: 'txt2img', prompt, width, height, style, url } }, '*')
+    let seed=seedInput.value;
+    parent.postMessage({ pluginMessage: { type: 'txt2img', prompt, width, height, style, url,seed } }, '*')
     generatingImage = true;
     setUiAvailiability();
     progressInterval = setInterval(getProgress, 1000);

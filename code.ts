@@ -14,8 +14,10 @@ figma.ui.onmessage = async msg => {
     let width = msg.width;
     let height = msg.height;
     let style = msg.style;
+    let seed=msg.seed;
+    if(seed===""||seed===undefined)seed=-1;
     url = msg.url;
-    txt2img(msg.prompt, width, height, style);
+    txt2img(msg.prompt, width, height, style,seed);
   }
   if (msg.type === "auto_mask" || msg.type === "prompt_mask" || msg.type === "vectors_2_image") {
     let width = figma.currentPage.selection[0].width;
@@ -25,10 +27,13 @@ figma.ui.onmessage = async msg => {
     let imageUrl = msg.imageUrl;
     let prompt = msg.prompt;
     let vectors_guidance = msg.vectors_guidance;
+    let mask_only = msg.mask_only;
+    let seed=msg.seed;
+    if(seed===""||seed===undefined)seed=-1;
     url = msg.url;
-    if (msg.type === "auto_mask") auto_mask(imageUrl, "", width, height, style);
-    if (msg.type === "prompt_mask") prompt_mask(imageUrl, prompt, width, height, style);
-    if (msg.type === "vectors_2_image") vectors_2_image(imageUrl, prompt, width, height, style, vectors_guidance);
+    if (msg.type === "auto_mask") auto_mask(imageUrl, "", width, height, style,mask_only);
+    if (msg.type === "prompt_mask") prompt_mask(imageUrl, prompt, width, height, style,mask_only);
+    if (msg.type === "vectors_2_image") vectors_2_image(imageUrl, prompt, width, height, style, vectors_guidance,seed);
   }
   if(msg.type==="canny"){
     get_canny(msg.imageUrl,msg.url,msg.canny_low_threshold,msg.canny_high_threshold);
@@ -83,13 +88,15 @@ function svg_results(svg: string, width: number = 512, height: number = 512) {
   figma.viewport.scrollAndZoomIntoView(nodes);
   figma.ui.postMessage({ type: 'done' });
 }
-async function txt2img(prompt: string, width: number = 512, height: number = 512, style: string = "default") {
+async function txt2img(prompt: string, width: number = 512, height: number = 512, style: string = "default"
+  ,seed:number=-1) {
   prompt = get_styled_prompt(prompt, style);
   let query: any = {
     "prompt": prompt,
     "negative_prompt": default_bad_prompt,
     "steps": 30,
     "sampler_index": "Euler a",
+    "seed": seed,
     "cfg_scale": 7,
     "width": width,
     "height": height,
@@ -104,7 +111,8 @@ async function txt2img(prompt: string, width: number = 512, height: number = 512
   let data = await res.json();
   api_results("txt2img", data['images'][0])
 }
-async function auto_mask(imageUrl: string, prompt: string, width: number = 512, height: number = 512, style: string = "default") {
+async function auto_mask(imageUrl: string, prompt: string, width: number = 512, height: number = 512, style: string = "default",
+  mask_only:boolean=false) {
   prompt = get_styled_prompt(prompt, style);
   let query: any = {
     "image_str": imageUrl,
@@ -113,7 +121,7 @@ async function auto_mask(imageUrl: string, prompt: string, width: number = 512, 
     "alpha_matting_background_threshold": 10,
     "alpha_matting_erode_size": 10,
     "session_name": "u2net",
-    "only_mask": false,
+    "only_mask": mask_only,
     "post_process_mask": true,
   }
   let res = await fetch(`${url}/auto_mask/remove-background`, {
@@ -127,13 +135,14 @@ async function auto_mask(imageUrl: string, prompt: string, width: number = 512, 
   api_results("auto_mask", data['mask'])
 
 }
-async function prompt_mask(imageUrl: string, prompt: string, width: number = 512, height: number = 512, style: string = "default") {
+async function prompt_mask(imageUrl: string, prompt: string, width: number = 512, height: number = 512, style: string = "default"
+  ,mask_only:boolean=false) {
   prompt = get_styled_prompt(prompt, style);
   let query: any = {
     "image_str": imageUrl,
     "prompts": prompt,
     "neg_prompts": "white background",
-    "only_mask": false,
+    "only_mask": mask_only,
     "threshold": 0.4,
     "mask_blur_median": 11,
     "mask_blur_gaussian": 11,
@@ -150,7 +159,7 @@ async function prompt_mask(imageUrl: string, prompt: string, width: number = 512
 
 }
 async function vectors_2_image(imageUrl: string, prompt: string, width: number = 512, height: number = 512, style: string = "default", 
-                                  vectors_guidance: number = 1) {
+  vectors_guidance: number = 1,seed:number=-1) {
   prompt = get_styled_prompt(prompt, style);
   let query: any = {
     "prompt": prompt,
@@ -160,6 +169,7 @@ async function vectors_2_image(imageUrl: string, prompt: string, width: number =
     "cfg_scale": 7,
     "width": width,
     "height": height,
+    "seed": seed,
     "alwayson_scripts": {
       "controlnet": {
         "args": [
