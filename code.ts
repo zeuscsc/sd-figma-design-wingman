@@ -1,14 +1,20 @@
 let url = "";
+let api_key="";
 let used_base_model="2.1/rmadaMergeSD21768_v60.safetensors [7da43996bb]";
 let control_net_for_sketch="control_sd21_scribble-sd21-safe [6e34c018]";
 const IDEAL_SIZE = 768;
 const default_bad_prompt = "nfixer,text, logo, signature, over-saturated, over-exposed, amateur, extra limbs, extra barrel, b&w, close-up, duplicate, mutilated, extra fingers, mutated hands, deformed, blurry, bad proportions, extra limbs, cloned face, out of frame, bad anatomy, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, mutated hands, fused fingers, too many fingers, long neck, tripod, tube, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, mutation, mutated, extra limbs, extra legs, extra arms, disfigured, deformed, cross-eye, body out of frame, blurry, bad art, bad anatomy, "
 figma.showUI(__html__, { width: 320, height: 720 });
 figma.ui.onmessage = async msg => {
+  if(msg.type==="update_api_key"){
+    api_key=msg.api_key;
+    figma.clientStorage.setAsync("api_key",api_key);
+  }
   if(msg.type==="check_availibility"){
     url = msg.url;
     used_base_model=await get_loaded_model();
     await control_net_for_sketch_picker();
+    figma.clientStorage.setAsync("url",url);
   }
   if (msg.type === 'txt2img') {
     let width = msg.width;
@@ -70,9 +76,11 @@ figma.on('selectionchange', () => {
   const selection = figma.currentPage.selection;
   figma.ui.postMessage({ type: 'sync_img2img_ui', selected_nodes_count: selection.length });
 });
-function initialize() {
+async function initialize() {
+  api_key=await figma.clientStorage.getAsync('api_key');
+  url=await figma.clientStorage.getAsync('url');
   const selection = figma.currentPage.selection;
-  figma.ui.postMessage({ type: 'on_initialized', selected_nodes_count: selection.length });
+  figma.ui.postMessage({ type: 'on_initialized', selected_nodes_count: selection.length,api_key,url });
 }
 initialize()
 
@@ -104,11 +112,13 @@ async function txt2img(prompt: string, width: number = 512, height: number = 512
   let res = await fetch(`${url}/sdapi/v1/txt2img`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      "tecky_api_service_key": api_key
     },
     body: JSON.stringify(query)
   });
   let data = await res.json();
+  console.log(data)
   api_results("txt2img", data['images'][0])
 }
 async function auto_mask(imageUrl: string, prompt: string, width: number = 512, height: number = 512, style: string = "default",
@@ -127,7 +137,8 @@ async function auto_mask(imageUrl: string, prompt: string, width: number = 512, 
   let res = await fetch(`${url}/auto_mask/remove-background`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      "tecky_api_service_key": api_key
     },
     body: JSON.stringify(query)
   });
@@ -150,7 +161,8 @@ async function prompt_mask(imageUrl: string, prompt: string, width: number = 512
   let res = await fetch(`${url}/prompt_mask/remove-background`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      "tecky_api_service_key": api_key
     },
     body: JSON.stringify(query)
   });
@@ -187,7 +199,8 @@ async function vectors_2_image(imageUrl: string, prompt: string, width: number =
   let res = await fetch(`${url}/sdapi/v1/txt2img`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      "tecky_api_service_key": api_key
     },
     body: JSON.stringify(query)
   });
@@ -243,7 +256,8 @@ async function get_canny(imageUrl: string,url:string,canny_low_threshold:number,
   let res = await fetch(`${url}/figma/canny`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      "tecky_api_service_key": api_key
     },
     body: JSON.stringify(query)
   });
@@ -263,11 +277,13 @@ async function create_image_node(original_task: string, byte_array: Uint8Array) 
       scaleMode: 'FILL'
     }
   ]
-  if (figma.currentPage.selection.length > 0) {
-    imageNode.x = figma.currentPage.selection[0].x + 100;
-    imageNode.y = figma.currentPage.selection[0].y + 100;
-    // nodes.push(figma.currentPage.selection[0])
-  }
+  // if (figma.currentPage.selection.length > 0) {
+  //   imageNode.x = figma.currentPage.selection[0].x + 100;
+  //   imageNode.y = figma.currentPage.selection[0].y + 100;
+  //   // nodes.push(figma.currentPage.selection[0])
+  // }
+  imageNode.x=figma.viewport.center.x-width/2;
+  imageNode.y=figma.viewport.center.y-height/2;
   // nodes.push(imageNode);
   // figma.currentPage.selection = nodes;
   // figma.viewport.scrollAndZoomIntoView(nodes);
@@ -300,13 +316,13 @@ function keep_aspect_ratio(width:number,height:number){
 
 async function get_loaded_model() {
   if(url==="")return
-  let res = await fetch(`${url}/sdapi/v1/options`);
+  let res = await fetch(`${url}/sdapi/v1/options`,{method: 'GET', headers: {"tecky_api_service_key":api_key}});
   let options = await res.json();
   return options['sd_model_checkpoint'];
 }
 async function control_net_for_sketch_picker(){
   if(url==="")return
-  let res = await fetch(`${url}/controlnet/model_list`);
+  let res = await fetch(`${url}/controlnet/model_list`,{method: 'GET', headers: {"tecky_api_service_key":api_key}});
   let model_list = await res.json();
   model_list=model_list['model_list'];
   for(let model_name of model_list){
