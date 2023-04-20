@@ -113,7 +113,7 @@ async function txt2img(prompt: string, width: number = 512, height: number = 512
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      "tecky_api_service_key": api_key
+      "Authorization": api_key
     },
     body: JSON.stringify(query)
   });
@@ -138,7 +138,7 @@ async function auto_mask(imageUrl: string, prompt: string, width: number = 512, 
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      "tecky_api_service_key": api_key
+      "Authorization": api_key
     },
     body: JSON.stringify(query)
   });
@@ -162,7 +162,7 @@ async function prompt_mask(imageUrl: string, prompt: string, width: number = 512
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      "tecky_api_service_key": api_key
+      "Authorization": api_key
     },
     body: JSON.stringify(query)
   });
@@ -200,7 +200,7 @@ async function vectors_2_image(imageUrl: string, prompt: string, width: number =
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      "tecky_api_service_key": api_key
+      "Authorization": api_key
     },
     body: JSON.stringify(query)
   });
@@ -257,7 +257,7 @@ async function get_canny(imageUrl: string,url:string,canny_low_threshold:number,
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      "tecky_api_service_key": api_key
+      "Authorization": api_key
     },
     body: JSON.stringify(query)
   });
@@ -316,13 +316,13 @@ function keep_aspect_ratio(width:number,height:number){
 
 async function get_loaded_model() {
   if(url==="")return
-  let res = await fetch(`${url}/sdapi/v1/options`,{method: 'GET', headers: {"tecky_api_service_key":api_key}});
+  let res = await fetch(`${url}/sdapi/v1/options`,{method: 'GET', headers: {"Authorization":api_key}});
   let options = await res.json();
   return options['sd_model_checkpoint'];
 }
 async function control_net_for_sketch_picker(){
   if(url==="")return
-  let res = await fetch(`${url}/controlnet/model_list`,{method: 'GET', headers: {"tecky_api_service_key":api_key}});
+  let res = await fetch(`${url}/controlnet/model_list`,{method: 'GET', headers: {"Authorization":api_key}});
   let model_list = await res.json();
   model_list=model_list['model_list'];
   for(let model_name of model_list){

@@ -444,7 +444,8 @@ label span {
   }
   async function getProgress() {
     const url = document.getElementById('url').value;
-    let res = await fetch(`${url}/sdapi/v1/progress`)
+    const api_key = apikeyInput.value;
+    let res = await fetch(`${url}/sdapi/v1/progress`,{method: 'GET', headers: {Authorization: api_key}})
     let data = await res.json();
     document.getElementById('progress').value = data.progress;
     if (data.state.job_count == 0) {
@@ -494,11 +495,11 @@ label span {
     const url = urlInput.value;
     const api_key = apikeyInput.value;
     connectionStatusLabel.innerHTML = "Checking connection...";
-    sdServerAvailable = await apiHaveResponse(`${url}/app_id/`,{method: 'GET', headers: {tecky_api_service_key: api_key}});
-    autoMaskAvailable = await apiHaveResponse(`${url}/auto_mask/status`,{method: 'GET', headers: {tecky_api_service_key: api_key}});
-    figmaAvailable = await apiHaveResponse(`${url}/figma/status`,{method: 'GET', headers: {tecky_api_service_key: api_key}});
-    promptMaskAvailable = await apiHaveResponse(`${url}/prompt_mask/status`,{method: 'GET', headers: {tecky_api_service_key: api_key}});
-    controlNetAvailable = await apiHaveResponse(`${url}/controlnet/version`,{method: 'GET', headers: {tecky_api_service_key: api_key}});
+    sdServerAvailable = await apiHaveResponse(`${url}/app_id/`,{method: 'GET', headers: {Authorization: api_key}});
+    autoMaskAvailable = await apiHaveResponse(`${url}/auto_mask/status`,{method: 'GET', headers: {Authorization: api_key}});
+    figmaAvailable = await apiHaveResponse(`${url}/figma/status`,{method: 'GET', headers: {Authorization: api_key}});
+    promptMaskAvailable = await apiHaveResponse(`${url}/prompt_mask/status`,{method: 'GET', headers: {Authorization: api_key}});
+    controlNetAvailable = await apiHaveResponse(`${url}/controlnet/version`,{method: 'GET', headers: {Authorization: api_key}});
     setUiAvailiability(selected_nodes_count);
     connectionStatusLabel.innerHTML = "";
     parent.postMessage({ pluginMessage: { type: 'check_availibility', original_task: "check_availibility" ,url} }, '*');
