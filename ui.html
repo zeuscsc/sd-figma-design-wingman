@@ -240,8 +240,8 @@
   let controlNetAvailable = false;
   let generatingImage = false;
   let selected_nodes_count = 0;
-  const checkAvailibilityDebouncedHandleInputValueChange = debounce(checkAvailibility, TickPeriod*0.5);
-  const throttledGetProgress=runEvery(getProgress, TickPeriod*10);
+  const checkAvailibilityDebouncedHandleInputValueChange = debounce(checkAvailibility, TickPeriod * 0.5);
+  const throttledGetProgress = runEvery(getProgress, TickPeriod * 10);
   urlInput.addEventListener('input', checkAvailibilityDebouncedHandleInputValueChange);
   apikeyInput.addEventListener('input', (e) => {
     let api_key = e.target.value;
@@ -389,7 +389,7 @@
     const vectors_guidance = document.getElementById('vectors_guidance_slider').value;
     const mask_only = document.getElementById('mask_only').checked;
 
-    let seed = seedInput.value;
+    let seed = getSeed();
     let prompt = textbox_prompt.value;
     let width = width_input.value;
     let height = height_input.value;
@@ -427,11 +427,11 @@
     let prompt = textbox_prompt.value;
     let width = width_input.value;
     let height = height_input.value;
-    let seed = seedInput.value;
+    let seed = getSeed();
     parent.postMessage({ pluginMessage: { type: 'txt2img', prompt, width, height, style, url, seed } }, '*');
     generatingImage = true;
     setUiAvailiability();
-    document.getElementById('progress').value=0;
+    document.getElementById('progress').value = 0;
     realProgressInterval = setInterval(setProgress, realProgressUpdateTime);
     fakeProgressInterval = setInterval(fakeProgress, fakeProgressUpdateTime);
   }
@@ -441,7 +441,7 @@
     parent.postMessage({ pluginMessage: { type: 'get_selected_image', original_task: "vectors_2_image" } }, '*');
     generatingImage = true;
     setUiAvailiability();
-    document.getElementById('progress').value=0;
+    document.getElementById('progress').value = 0;
     realProgressInterval = setInterval(setProgress, realProgressUpdateTime);
     fakeProgressInterval = setInterval(fakeProgress, fakeProgressUpdateTime);
   }
@@ -460,7 +460,7 @@
   async function isQueueing() {
     let progressData = await throttledGetProgress();
     if (progressData.state.job_count > 0) {
-      serverLogLabel.innerHTML="";
+      serverLogLabel.innerHTML = "";
       serverLogLabel.innerHTML += "Waiting for others to finish their tasks.<br>";
       return true;
     }
@@ -474,7 +474,7 @@
       document.getElementById('progress').value = progress;
     }
   }
-  async function getProgress(){
+  async function getProgress() {
     const url = document.getElementById('url').value;
     const api_key = apikeyInput.value;
     let res = await fetch(`${url}/sdapi/v1/progress?skip_current_image=true`, { method: 'GET', headers: { Authorization: api_key } })
@@ -541,6 +541,18 @@
     connectionStatusLabel.innerHTML = "";
     parent.postMessage({ pluginMessage: { type: 'check_availibility', original_task: "check_availibility", url } }, '*');
   }
+  function getSeed() {
+    function getRandomFullRangeInt() {
+      const min = BigInt(0);
+      const max = BigInt(Number.MAX_SAFE_INTEGER);
+      const range = max - min + BigInt(1);
+      const randomBigInt = BigInt(Math.floor(Math.random() * Number(range)));
+      return String(min + randomBigInt);
+    }
+    let seed = seedInput.value;
+    if (seed == "") seed = getRandomFullRangeInt();
+    return seed;
+  }
   function debounce(func, delay) {
     let timeoutId;
     return function () {
@@ -553,38 +565,38 @@
     }
   }
   function debounceAsync(func, delay) {
-  let timeout;
-  return async function (...args) {
-    return new Promise(async (resolve, reject) => {
-      if (timeout) {
-        clearTimeout(timeout);
-      }
-      timeout = setTimeout(async () => {
-        try {
-          const result = await func.apply(this, args);
-          resolve(result);
-        } catch (error) {
-          reject(error);
+    let timeout;
+    return async function (...args) {
+      return new Promise(async (resolve, reject) => {
+        if (timeout) {
+          clearTimeout(timeout);
         }
-      }, delay);
-    });
-  };
-}
-function runEvery(func,ticks) {
-  let lastExecuted = null;
-  let lastResult = null;
+        timeout = setTimeout(async () => {
+          try {
+            const result = await func.apply(this, args);
+            resolve(result);
+          } catch (error) {
+            reject(error);
+          }
+        }, delay);
+      });
+    };
+  }
+  function runEvery(func, ticks) {
+    let lastExecuted = null;
+    let lastResult = null;
 
-  return async function (...args) {
-    const now = Date.now();
+    return async function (...args) {
+      const now = Date.now();
 
-    if (!lastExecuted || now - lastExecuted > ticks) {
-      lastExecuted = now;
-      const result = await func.apply(this, args);
-      lastResult = result;
-      return result;
-    }else{
-      return lastResult;
-    }
-  };
-}
+      if (!lastExecuted || now - lastExecuted > ticks) {
+        lastExecuted = now;
+        const result = await func.apply(this, args);
+        lastResult = result;
+        return result;
+      } else {
+        return lastResult;
+      }
+    };
+  }
 </script>

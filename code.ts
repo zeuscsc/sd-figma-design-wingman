@@ -2,6 +2,7 @@ let url = "";
 let api_key="";
 let used_base_model="2.1/rmadaMergeSD21768_v60.safetensors [7da43996bb]";
 let control_net_for_sketch="control_sd21_scribble-sd21-safe [6e34c018]";
+let currentSeed="-1";
 const IDEAL_SIZE = 768;
 const default_bad_prompt = "nfixer,text, logo, signature, over-saturated, over-exposed, amateur, extra limbs, extra barrel, b&w, close-up, duplicate, mutilated, extra fingers, mutated hands, deformed, blurry, bad proportions, extra limbs, cloned face, out of frame, bad anatomy, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, mutated hands, fused fingers, too many fingers, long neck, tripod, tube, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, mutation, mutated, extra limbs, extra legs, extra arms, disfigured, deformed, cross-eye, body out of frame, blurry, bad art, bad anatomy, "
 figma.showUI(__html__, { width: 320, height: 720 });
@@ -21,7 +22,7 @@ figma.ui.onmessage = async msg => {
     let height = msg.height;
     let style = msg.style;
     let seed=msg.seed;
-    if(seed===""||seed===undefined)seed=-1;
+    currentSeed=seed;
     url = msg.url;
     txt2img(msg.prompt, width, height, style,seed);
   }
@@ -35,7 +36,7 @@ figma.ui.onmessage = async msg => {
     let vectors_guidance = msg.vectors_guidance;
     let mask_only = msg.mask_only;
     let seed=msg.seed;
-    if(seed===""||seed===undefined)seed=-1;
+    currentSeed=seed;
     url = msg.url;
     if (msg.type === "auto_mask") auto_mask(imageUrl, "", width, height, style,mask_only);
     if (msg.type === "prompt_mask") prompt_mask(imageUrl, prompt, width, height, style,mask_only);
@@ -97,7 +98,7 @@ function svg_results(svg: string, width: number = 512, height: number = 512) {
   figma.ui.postMessage({ type: 'done' });
 }
 async function txt2img(prompt: string, width: number = 512, height: number = 512, style: string = "default"
-  ,seed:number=-1) {
+  ,seed:string="-1") {
   prompt = get_styled_prompt(prompt, style);
   let query: any = {
     "prompt": prompt,
@@ -171,7 +172,7 @@ async function prompt_mask(imageUrl: string, prompt: string, width: number = 512
 
 }
 async function vectors_2_image(imageUrl: string, prompt: string, width: number = 512, height: number = 512, style: string = "default", 
-  vectors_guidance: number = 1,seed:number=-1) {
+  vectors_guidance: number = 1,seed:string="-1") {
   prompt = get_styled_prompt(prompt, style);
   let query: any = {
     "prompt": prompt,
@@ -279,16 +280,9 @@ async function create_image_node(original_task: string, byte_array: Uint8Array) 
       scaleMode: 'FILL'
     }
   ]
-  // if (figma.currentPage.selection.length > 0) {
-  //   imageNode.x = figma.currentPage.selection[0].x + 100;
-  //   imageNode.y = figma.currentPage.selection[0].y + 100;
-  //   // nodes.push(figma.currentPage.selection[0])
-  // }
+  imageNode.name = currentSeed;
   imageNode.x=figma.viewport.center.x-width/2;
   imageNode.y=figma.viewport.center.y-height/2;
-  // nodes.push(imageNode);
-  // figma.currentPage.selection = nodes;
-  // figma.viewport.scrollAndZoomIntoView(nodes);
   figma.ui.postMessage({ original_task, type: 'done' });
 }
 async function get_selected_image() {
