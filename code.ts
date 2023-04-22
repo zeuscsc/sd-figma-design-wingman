@@ -243,6 +243,8 @@ function get_styled_prompt(prompt: string, style: string) {
     default:
       break;
   }
+  if(/scifi/.test(prompt)) prompt=`fking_scifi_v2,${prompt}`
+  
   return prompt;
 }
 

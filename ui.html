@@ -31,18 +31,21 @@
       width: 20px;
       height: 20px;
     }
+
     label {
-  display: flex;
-  align-items: center;
+      display: flex;
+      align-items: center;
     }
+
     label input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  margin-right: 5px;
-}
-label span {
-  line-height: 1.2;
-}
+      width: 16px;
+      height: 16px;
+      margin-right: 5px;
+    }
+
+    label span {
+      line-height: 1.2;
+    }
 
     .size {
       width: 100%;
@@ -68,10 +71,10 @@ label span {
       vertical-align: left;
     }
 
-    #mask_only{
-  width: 16px;
-  height: 16px;
-  margin-right: 5px;
+    #mask_only {
+      width: 16px;
+      height: 16px;
+      margin-right: 5px;
     }
 
     .image2vectors2imageTable {
@@ -97,16 +100,20 @@ label span {
 <body>
   <table>
     <tr>
-      <th><p>Hosting URL:</p></th>
-      <th><p>API Key:</p></th>
+      <th>
+        <p>Hosting URL:</p>
+      </th>
+      <th>
+        <p>API Key:</p>
+      </th>
     </tr>
     <tr>
       <td><input id="url" type="text" placeholder="Enter a Stable Diffusion Hosting URL" /></td>
       <td><input id="api_key" type="password" placeholder="Enter the API key for Server if needed" /></td>
     </tr>
   </table>
-  
-  
+
+
   <div class="row">
     <input type="button" id="connect2local" value="Connect to&#13;&#10;Local Server"
       onclick="document.getElementById('url').value='http://localhost:7860';checkAvailibility()" />
@@ -174,7 +181,7 @@ label span {
     </tr>
     <tr>
       <td><input type="range" id="canny_high_threshold_slider" min="1" max="255" value="200" step="1"></td>
-      <td ></td>
+      <td></td>
     </tr>
     <tr>
       <td><label id="canny_low_threshold_label" for="canny_low_threshold_label">Low Threshold: 100</label></td>
@@ -209,8 +216,9 @@ label span {
 <script src="https://cdn.jsdelivr.net/npm/imagetracerjs@1.2.6/imagetracer_v1.2.6.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/simplify-js@1.2.4/simplify.min.js"></script>
 <script>
+  const TickPeriod = 1000;
   const urlInput = document.getElementById('url');
-  const apikeyInput=document.getElementById('api_key');
+  const apikeyInput = document.getElementById('api_key');
   const txt2imgButton = document.getElementById('txt2img');
   const renderSketchButton = document.getElementById('vectors_2_image');
   const autoMaskButton = document.getElementById('auto_mask');
@@ -221,7 +229,10 @@ label span {
   const connectionStatusLabel = document.getElementById('connection_status');
   const keepGeneratingCheckbox = document.getElementById('keep_generating_checkbox');
   const seedInput = document.getElementById('seed');
-  let progressInterval = null;
+  let realProgressUpdateTime = TickPeriod * 10;
+  let realProgressInterval = null;
+  let fakeProgressUpdateTime = TickPeriod * 1;
+  let fakeProgressInterval = null;
   let sdServerAvailable = false;
   let autoMaskAvailable = false;
   let figmaAvailable = false;
@@ -229,18 +240,19 @@ label span {
   let controlNetAvailable = false;
   let generatingImage = false;
   let selected_nodes_count = 0;
-  const checkAvailibilityDebouncedHandleInputValueChange = debounce(checkAvailibility, 500);
+  const checkAvailibilityDebouncedHandleInputValueChange = debounce(checkAvailibility, TickPeriod*0.5);
+  const throttledGetProgress=runEvery(getProgress, TickPeriod*10);
   urlInput.addEventListener('input', checkAvailibilityDebouncedHandleInputValueChange);
-  apikeyInput.addEventListener('input', (e)=>{
-    let api_key=e.target.value;
-    parent.postMessage({pluginMessage:{type:"update_api_key", api_key:api_key}}, "*");
+  apikeyInput.addEventListener('input', (e) => {
+    let api_key = e.target.value;
+    parent.postMessage({ pluginMessage: { type: "update_api_key", api_key: api_key } }, "*");
   });
   document.getElementById('txt2img').onclick = (e) => {
     txt2img();
   }
   document.getElementById('seed').oninput = (e) => {
-    let seed=e.target.value;
-    if(seed !==""){
+    let seed = e.target.value;
+    if (seed !== "") {
       keepGeneratingCheckbox.checked = false;
     }
   }
@@ -299,8 +311,8 @@ label span {
       setUiAvailiability(event.data.pluginMessage.selected_nodes_count);
     }
     if (event.data && event.data.pluginMessage.type === 'on_initialized') {
-      urlInput.value=event.data.pluginMessage.url;
-      apikeyInput.value=event.data.pluginMessage.api_key;
+      urlInput.value = event.data.pluginMessage.url;
+      apikeyInput.value = event.data.pluginMessage.api_key;
       checkAvailibility();
       selected_nodes_count = event.data.pluginMessage.selected_nodes_count;
     }
@@ -326,7 +338,8 @@ label span {
     txt2imgButton.disabled = false;
     renderSketchButton.disabled = false;
     generatingImage = false;
-    clearInterval(progressInterval);
+    clearInterval(realProgressInterval);
+    clearInterval(fakeProgressInterval);
     document.getElementById('progress').value = 1;
     switch (original_task) {
       case "txt2img":
@@ -374,13 +387,13 @@ label span {
     const height_input = document.getElementById('height');
     const url = document.getElementById('url').value;
     const vectors_guidance = document.getElementById('vectors_guidance_slider').value;
-    const mask_only=document.getElementById('mask_only').checked;
-    
-    let seed=seedInput.value;
+    const mask_only = document.getElementById('mask_only').checked;
+
+    let seed = seedInput.value;
     let prompt = textbox_prompt.value;
     let width = width_input.value;
     let height = height_input.value;
-    const pluginMessage = { type: original_task, imageUrl: base64, prompt, width, height, style, url, vectors_guidance,mask_only,seed }
+    const pluginMessage = { type: original_task, imageUrl: base64, prompt, width, height, style, url, vectors_guidance, mask_only, seed }
     parent.postMessage({ pluginMessage }, '*')
   }
   async function get_canny(data, original_task) {
@@ -403,10 +416,9 @@ label span {
       parent.postMessage({ pluginMessage: { type: 'create_node_from_svg', svgstr, width, height } }, '*')
     }, "posterized1");
   }
-  function txt2img() {
-    if (txt2imgButton.disabled) {
-      return;
-    }
+  async function txt2img() {
+    if (txt2imgButton.disabled) { return; }
+    if (await isQueueing()) return;
     const style = getSelectedStyle()
     const textbox_prompt = document.getElementById('prompt');
     const width_input = document.getElementById('width');
@@ -415,20 +427,23 @@ label span {
     let prompt = textbox_prompt.value;
     let width = width_input.value;
     let height = height_input.value;
-    let seed=seedInput.value;
-    parent.postMessage({ pluginMessage: { type: 'txt2img', prompt, width, height, style, url,seed } }, '*')
+    let seed = seedInput.value;
+    parent.postMessage({ pluginMessage: { type: 'txt2img', prompt, width, height, style, url, seed } }, '*');
     generatingImage = true;
     setUiAvailiability();
-    progressInterval = setInterval(getProgress, 1000);
+    document.getElementById('progress').value=0;
+    realProgressInterval = setInterval(setProgress, realProgressUpdateTime);
+    fakeProgressInterval = setInterval(fakeProgress, fakeProgressUpdateTime);
   }
-  function vectors_2_image() {
-    if (renderSketchButton.disabled) {
-      return;
-    }
+  async function vectors_2_image() {
+    if (renderSketchButton.disabled) { return };
+    if (await isQueueing()) { return };
     parent.postMessage({ pluginMessage: { type: 'get_selected_image', original_task: "vectors_2_image" } }, '*');
     generatingImage = true;
     setUiAvailiability();
-    progressInterval = setInterval(getProgress, 1000);
+    document.getElementById('progress').value=0;
+    realProgressInterval = setInterval(setProgress, realProgressUpdateTime);
+    fakeProgressInterval = setInterval(fakeProgress, fakeProgressUpdateTime);
   }
   function _base64ToUint8Array(base64) {
     var binary_string = window.atob(base64);
@@ -442,16 +457,38 @@ label span {
   function getSelectedStyle() {
     return document.querySelector('input[name="style"]:checked').value;
   }
-  async function getProgress() {
+  async function isQueueing() {
+    let progressData = await throttledGetProgress();
+    if (progressData.state.job_count > 0) {
+      serverLogLabel.innerHTML="";
+      serverLogLabel.innerHTML += "Waiting for others to finish their tasks.<br>";
+      return true;
+    }
+    return false;
+  }
+  function fakeProgress() {
+    let progress = document.getElementById('progress').value;
+    const maxFakeProgress = 0.95;
+    if (progress < maxFakeProgress) {
+      progress = progress + (1 - progress) * .1;
+      document.getElementById('progress').value = progress;
+    }
+  }
+  async function getProgress(){
     const url = document.getElementById('url').value;
     const api_key = apikeyInput.value;
-    let res = await fetch(`${url}/sdapi/v1/progress`,{method: 'GET', headers: {Authorization: api_key}})
-    let data = await res.json();
+    let res = await fetch(`${url}/sdapi/v1/progress?skip_current_image=true`, { method: 'GET', headers: { Authorization: api_key } })
+    return await res.json();
+  }
+  async function setProgress() {
+    let data = await getProgress();
     document.getElementById('progress').value = data.progress;
     if (data.state.job_count == 0) {
-      clearInterval(progressInterval);
+      clearInterval(realProgressInterval);
+      clearInterval(fakeProgressInterval);
       document.getElementById('progress').value = 1;
     }
+    return data;
   }
   function setUiAvailiability(selected_nodes_count = 0) {
     serverLogLabel.innerHTML = "";
@@ -495,14 +532,14 @@ label span {
     const url = urlInput.value;
     const api_key = apikeyInput.value;
     connectionStatusLabel.innerHTML = "Checking connection...";
-    sdServerAvailable = await apiHaveResponse(`${url}/app_id/`,{method: 'GET', headers: {Authorization: api_key}});
-    autoMaskAvailable = await apiHaveResponse(`${url}/auto_mask/status`,{method: 'GET', headers: {Authorization: api_key}});
-    figmaAvailable = await apiHaveResponse(`${url}/figma/status`,{method: 'GET', headers: {Authorization: api_key}});
-    promptMaskAvailable = await apiHaveResponse(`${url}/prompt_mask/status`,{method: 'GET', headers: {Authorization: api_key}});
-    controlNetAvailable = await apiHaveResponse(`${url}/controlnet/version`,{method: 'GET', headers: {Authorization: api_key}});
+    sdServerAvailable = await apiHaveResponse(`${url}/app_id/`, { method: 'GET', headers: { Authorization: api_key } });
+    autoMaskAvailable = await apiHaveResponse(`${url}/auto_mask/status`, { method: 'GET', headers: { Authorization: api_key } });
+    figmaAvailable = await apiHaveResponse(`${url}/figma/status`, { method: 'GET', headers: { Authorization: api_key } });
+    promptMaskAvailable = await apiHaveResponse(`${url}/prompt_mask/status`, { method: 'GET', headers: { Authorization: api_key } });
+    controlNetAvailable = await apiHaveResponse(`${url}/controlnet/version`, { method: 'GET', headers: { Authorization: api_key } });
     setUiAvailiability(selected_nodes_count);
     connectionStatusLabel.innerHTML = "";
-    parent.postMessage({ pluginMessage: { type: 'check_availibility', original_task: "check_availibility" ,url} }, '*');
+    parent.postMessage({ pluginMessage: { type: 'check_availibility', original_task: "check_availibility", url } }, '*');
   }
   function debounce(func, delay) {
     let timeoutId;
@@ -515,4 +552,39 @@ label span {
       }, delay);
     }
   }
+  function debounceAsync(func, delay) {
+  let timeout;
+  return async function (...args) {
+    return new Promise(async (resolve, reject) => {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      timeout = setTimeout(async () => {
+        try {
+          const result = await func.apply(this, args);
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      }, delay);
+    });
+  };
+}
+function runEvery(func,ticks) {
+  let lastExecuted = null;
+  let lastResult = null;
+
+  return async function (...args) {
+    const now = Date.now();
+
+    if (!lastExecuted || now - lastExecuted > ticks) {
+      lastExecuted = now;
+      const result = await func.apply(this, args);
+      lastResult = result;
+      return result;
+    }else{
+      return lastResult;
+    }
+  };
+}
 </script>
