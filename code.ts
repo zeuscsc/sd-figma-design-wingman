@@ -215,8 +215,7 @@ function get_styled_prompt(prompt: string, style: string) {
       prompt = `.photo realistic, ultra details, natural light,
       ${prompt}
       ,  octane, dimly lit, low key,
-      , digital art, (photo,
-      sony a7, 50 mm, hyperrealistic, big depth of field, colors, hyperdetailed, hyperrealistic) , ((moody lighting)), (ambient light)
+      , digital art, (photo, 80 mm, hyperrealistic, big depth of field, colors, hyperdetailed, hyperrealistic) , ((moody lighting)), (ambient light)
       `;
       break;
     case "icon":
