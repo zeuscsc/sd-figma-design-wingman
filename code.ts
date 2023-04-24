@@ -13,8 +13,11 @@ figma.ui.onmessage = async msg => {
   }
   if(msg.type==="check_availibility"){
     url = msg.url;
-    used_base_model=await get_loaded_model();
-    await control_net_for_sketch_picker();
+    try{
+      used_base_model=await get_loaded_model();
+      await control_net_for_sketch_picker();
+    }catch(e){
+    }
     figma.clientStorage.setAsync("url",url);
   }
   if (msg.type === 'txt2img') {
@@ -312,6 +315,7 @@ function keep_aspect_ratio(width:number,height:number){
 async function get_loaded_model() {
   if(url==="")return
   let res = await fetch(`${url}/sdapi/v1/options`,{method: 'GET', headers: {"Authorization":api_key}});
+  if(res.status===403||res.status===401) figma.ui.postMessage({ type: 'server_too_busy', used_base_model });
   let options = await res.json();
   return options['sd_model_checkpoint'];
 }

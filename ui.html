@@ -320,6 +320,11 @@
       checkAvailibility();
       selected_nodes_count = event.data.pluginMessage.selected_nodes_count;
     }
+    if(event.data && event.data.pluginMessage.type === 'server_too_busy') {
+      controlNetAvailable = false;
+      setUiAvailiability(0)
+      serverLogLabel.innerHTML += "Server is busy.<br>";
+    }
   });
 
   window.addEventListener("keydown", function (event) {
@@ -459,9 +464,9 @@
   }
   async function isQueueing() {
     let progressData = await throttledGetProgress();
-    if (progressData.state.job_count > 0) {
+    if (!progressData||!progressData.state||progressData.state.job_count > 0) {
       serverLogLabel.innerHTML = "";
-      serverLogLabel.innerHTML += "Waiting for others to finish their tasks.<br>";
+      serverLogLabel.innerHTML += "Server is busy.<br>";
       return true;
     }
     return false;
@@ -471,6 +476,7 @@
     const maxFakeProgress = 0.95;
     if (progress < maxFakeProgress) {
       progress = progress + (1 - progress) * .1;
+      if(progress>maxFakeProgress) progress = maxFakeProgress;
       document.getElementById('progress').value = progress;
     }
   }
@@ -537,7 +543,7 @@
     figmaAvailable = await apiHaveResponse(`${url}/figma/status`, { method: 'GET', headers: { Authorization: api_key } });
     promptMaskAvailable = await apiHaveResponse(`${url}/prompt_mask/status`, { method: 'GET', headers: { Authorization: api_key } });
     controlNetAvailable = await apiHaveResponse(`${url}/controlnet/version`, { method: 'GET', headers: { Authorization: api_key } });
-    setUiAvailiability(selected_nodes_count);
+    setUiAvailiability(0);
     connectionStatusLabel.innerHTML = "";
     parent.postMessage({ pluginMessage: { type: 'check_availibility', original_task: "check_availibility", url } }, '*');
   }
