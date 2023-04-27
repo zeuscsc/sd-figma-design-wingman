@@ -122,6 +122,7 @@
   </div>
   <h6 id="server_log"></h6>
   <h5 id="connection_status"></h5>
+
   <p>Prompt:</p>
   <input id="prompt" type="text" placeholder="Enter a prompt" />
   <div class="row">
@@ -146,69 +147,88 @@
       </td>
     </tr>
   </table>
-  <table class="stylesRadio">
-    <tr>
-      <th></th>
-      <th></th>
-      <th></th>
-    </tr>
-    <tr>
-      <td><input type="radio" class="radio" name="style" value="default" checked><label for="style">Default</label></td>
-      <td><input type="radio" class="radio" name="style" value="photo"><label for="style">Photo</label></td>
-      <td><input type="radio" class="radio" name="style" value="icon"><label for="style">Icon</label></td>
-    </tr>
-    <tr>
-      <td><input type="radio" class="radio" name="style" value="sticker"><label for="style">Sticker</label></td>
-      <td><input type="radio" class="radio" name="style" value="anime"><label for="style">Anime</label></td>
-      <td><input type="radio" class="radio" name="style" value="studio"><label for="style">Studio</label></td>
-    </tr>
-  </table>
   <div class="row">
-    <input type="button" id="txt2img" disabled value="Text 2 Image" />
+    <div>
+      <label>Style:</label>
+      <select name="styles" id="styles" style="font-size: medium;">
+        <option value="none">none</option>
+        <option value="photo">Photo</option>
+        <option value="icon">Icon</option>
+        <option value="sticker">Sticker</option>
+        <option value="anime">Anime</option>
+        <option value="studio">Studio</option>
+      </select>
+    </div>
+    <div>
+      <label id="step_label" for="step_slider">Step: 30</label>
+      <input type="range" id="step_slider" min="10" max="150" value="30" step="10">
+    </div>
   </div>
-  <div class="row">
-    <input type="button" id="auto_mask" disabled value="Auto&#13;&#10;Background Removal" />
-    <input type="button" id="prompt_mask" disabled value="Prompt&#13;&#10;Background Removal" />
+  <label>Choose a Sampling method:</label>
+  <select name="samplers" id="samplers">
+    <option value="Euler">Simple Converge (Euler)</option>
+    <option value="Euler a">Simple Diverge (Euler a)</option>
+    <option value="DPM++ SDE Karras">High Quality Converge (DPM++ SDE Karras)</option>
+    <option value="DPM++ 2S a Karras">High Quality Diverge (DPM++ 2S a Karras)</option>
+    <option value="UniPC">Fast (UniPC)</option>
+  </select>
+  <p></p>
+  <div id="container">
+    <div class="row">
+      <input type="button" id="txt2img" disabled value="Text 2 Image" />
+    </div>
+    <div id="img_required_container">
+      <div class="">
+        <fieldset>
+          <legend>Image to Vectors</legend>
+          <div class="row">
+            <div>
+              <label id="canny_low_threshold_label" style="font-size: small;" for="canny_low_threshold_label">Low Threshold: 100</label>
+              <input type="range" id="canny_low_threshold_slider" min="1" max="255" value="100" step="1">
+            </div>
+            <div>
+              <label id="canny_high_threshold_label"  style="font-size: small;" for="canny_high_threshold_slider">High Threshold: 200</label>
+              <input type="range" id="canny_high_threshold_slider" min="1" max="255" value="200" step="1">
+            </div>
+          </div>
+          <input type="button" id="image_2_vectors" disabled value="Image 2 Vectors" />
+        </fieldset>
+        <fieldset>
+          <legend>Render Sketch</legend>
+          <label id="vectors_guidance_label" for="vectors_guidance_slider">Vectors Guidance: Normal</label>
+          <input type="range" id="vectors_guidance_slider" min="0" max="2" value="1" step="0.25"
+            list="vectors_guidance_data">
+          <datalist id="vectors_guidance_data">
+            <option value="0" label="None">
+            <option value="0.5" label="Free">
+            <option value="1" label="Normal">
+            <option value="1.5" label="Details">
+            <option value="2" label="Same">
+          </datalist>
+          <input type="button" id="vectors_2_image" disabled value="Render Sketch" />
+        </fieldset>
+        <fieldset>
+          <legend>Rework Image</legend>
+          <div class="row">
+            <input type="button" id="change_background" disabled value="Change Background" />
+            <!-- <input type="button" id="beautify_edge" disabled value="Beautify Edge" /> -->
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Remove Background</legend>
+          <input type="button" id="auto_mask" disabled value="Auto Background Removal" />
+          <input type="button" id="prompt_mask" disabled value="Keep Pixels Accroding to Prompt" />
+          <div class="row">
+          </div>
+          <label><input type="checkbox" class="checkbox" id="mask_only"><span>Mask Only</span></label>
+        </fieldset>
+      </div>
+      <div class="row">
+        <input type="button" id="find_items" disabled value="Find Items" />
+      </div>
+    </div>
   </div>
-  <table class="image2vectors2imageTable">
-    <tr>
-      <th></th>
-      <th></th>
-    </tr>
-    <tr>
-      <td><label id="canny_high_threshold_label" for="canny_high_threshold_slider">High Threshold: 200</label></td>
-      <td><label><input type="checkbox" class="checkbox" id="mask_only"><span>Mask Only</span></label></td>
-    </tr>
-    <tr>
-      <td><input type="range" id="canny_high_threshold_slider" min="1" max="255" value="200" step="1"></td>
-      <td></td>
-    </tr>
-    <tr>
-      <td><label id="canny_low_threshold_label" for="canny_low_threshold_label">Low Threshold: 100</label></td>
-      <td><label id="vectors_guidance_label" for="vectors_guidance_slider">Vectors Guidance: Normal</label></td>
-    </tr>
-    <tr>
-      <td><input type="range" id="canny_low_threshold_slider" min="1" max="255" value="100" step="1"></td>
-      <td>
-        <input type="range" id="vectors_guidance_slider" min="0" max="2" value="1" step="0.25"
-          list="vectors_guidance_data">
-        <datalist id="vectors_guidance_data">
-          <option value="0" label="None">
-          <option value="0.5" label="Free">
-          <option value="1" label="Normal">
-          <option value="1.5" label="Details">
-          <option value="2" label="Same">
-        </datalist>
-      </td>
-    </tr>
-  </table>
-  <div class="row">
-    <input type="button" id="image_2_vectors" disabled value="Image 2 Vectors" />
-    <input type="button" id="vectors_2_image" disabled value="Render Sketch" />
-  </div>
-  <div class="row">
-    <input type="button" id="find_items" disabled value="Find Items" />
-  </div>
+
   <progress id="progress" value="0" max="1"></progress>
 </body>
 
@@ -217,18 +237,33 @@
 <script src="https://cdn.jsdelivr.net/npm/simplify-js@1.2.4/simplify.min.js"></script>
 <script>
   const TickPeriod = 1000;
-  const urlInput = document.getElementById('url');
-  const apikeyInput = document.getElementById('api_key');
+  const container = document.getElementById('container');
+  const img_required_container = document.getElementById('img_required_container');
+  const url_input = document.getElementById('url');
+  const api_key_input = document.getElementById('api_key');
+  const textbox_prompt = document.getElementById('prompt');
   const txt2imgButton = document.getElementById('txt2img');
+  const width_input = document.getElementById('width');
+  const height_input = document.getElementById('height');
   const renderSketchButton = document.getElementById('vectors_2_image');
   const autoMaskButton = document.getElementById('auto_mask');
   const promptMaskButton = document.getElementById('prompt_mask');
+  const styles_select = document.getElementById('styles');
+  const changeBackgroundButton = document.getElementById('change_background');
   const image_2_vectorsButton = document.getElementById('image_2_vectors');
+  const vectors_guidance_slider = document.getElementById('vectors_guidance_slider');
+  const mask_only_checkbox = document.getElementById('mask_only');
+  const step_slider = document.getElementById('step_slider');
+  const samplers_select = document.getElementById('samplers');
   const findItemsButton = document.getElementById('find_items');
   const serverLogLabel = document.getElementById('server_log');
   const connectionStatusLabel = document.getElementById('connection_status');
   const keepGeneratingCheckbox = document.getElementById('keep_generating_checkbox');
   const seedInput = document.getElementById('seed');
+  const canny_high_threshold_slider = document.getElementById('canny_high_threshold_slider');
+  const canny_low_threshold_slider = document.getElementById('canny_low_threshold_slider');
+  const progressBar=document.getElementById('progress');
+  let settings;
   let realProgressUpdateTime = TickPeriod * 10;
   let realProgressInterval = null;
   let fakeProgressUpdateTime = TickPeriod * 1;
@@ -242,10 +277,11 @@
   let selected_nodes_count = 0;
   const checkAvailibilityDebouncedHandleInputValueChange = debounce(checkAvailibility, TickPeriod * 0.5);
   const throttledGetProgress = runEvery(getProgress, TickPeriod * 10);
-  urlInput.addEventListener('input', checkAvailibilityDebouncedHandleInputValueChange);
-  apikeyInput.addEventListener('input', (e) => {
+  url_input.addEventListener('input', checkAvailibilityDebouncedHandleInputValueChange);
+  api_key_input.addEventListener('input', (e) => {
     let api_key = e.target.value;
-    parent.postMessage({ pluginMessage: { type: "update_api_key", api_key: api_key } }, "*");
+    let pluginMessage = getPluginMessage("update_api_key")
+    parent.postMessage({ pluginMessage }, "*");
   });
   document.getElementById('txt2img').onclick = (e) => {
     txt2img();
@@ -257,13 +293,16 @@
     }
   }
   document.querySelector("#image_2_vectors").addEventListener("click", (e) => {
-    parent.postMessage({ pluginMessage: { type: 'get_selected_image', original_task: "image_2_vectors" } }, '*')
+    image_2_vectors();
   });
   document.querySelector("#auto_mask").addEventListener("click", (e) => {
-    parent.postMessage({ pluginMessage: { type: 'get_selected_image', original_task: "auto_mask" } }, '*')
+    auto_mask();
   });
   document.querySelector("#prompt_mask").addEventListener("click", (e) => {
-    parent.postMessage({ pluginMessage: { type: 'get_selected_image', original_task: "prompt_mask" } }, '*')
+    prompt_mask();
+  });
+  document.querySelector("#change_background").addEventListener("click", (e) => {
+    change_background();
   });
   document.querySelector("#vectors_2_image").addEventListener("click", (e) => {
     vectors_2_image();
@@ -296,8 +335,32 @@
   document.querySelector("#canny_low_threshold_slider").addEventListener("input", (e) => {
     document.querySelector("#canny_low_threshold_label").textContent = `Low Threshold: ${e.target.value}`;
   });
+  document.querySelector("#step_slider").addEventListener("input", (e) => {
+    document.querySelector("#step_label").textContent = `Step: ${e.target.value}`;
+  });
 
-  window.addEventListener('message', event => {
+  window.addEventListener('message', async event => {
+    if (event.data && event.data.pluginMessage.type === 'base64_to_Uint8Array') {
+      let base64 = event.data.pluginMessage.base64;
+      let uint8array = base64ToUint8Array(base64);
+      parent.postMessage({ pluginMessage: { type: 'base64_to_Uint8Array_result', uint8array } }, '*')
+    }
+    if (event.data && event.data.pluginMessage.type === 'Uint8Array_to_base64') {
+      let uint8array = event.data.pluginMessage.uint8array;
+      let base64 = btoa(new Uint8Array(uint8array).reduce((data, byte) => data + String.fromCharCode(byte), ''),);
+      parent.postMessage({ pluginMessage: { type: 'Uint8Array_to_base64_result', base64 } }, '*')
+    }
+    if (event.data && event.data.pluginMessage.type === 'image_to_svg') {
+      const base64 = event.data.pluginMessage.base64;
+      image_to_svg(base64);
+    }
+    if(event.data && event.data.pluginMessage.type === 'combine_images'){
+      const background_image_url = event.data.pluginMessage.background_url;
+      const foreground_image_url = event.data.pluginMessage.foreground_url;
+      const uint8array=await getCombineImages(background_image_url,foreground_image_url);
+      let base64 = btoa(new Uint8Array(uint8array).reduce((data, byte) => data + String.fromCharCode(byte), ''),);
+      parent.postMessage({ pluginMessage: { type: 'combine_images_result', base64 } }, '*')
+    }
     if (event.data && event.data.pluginMessage.type === 'api_results') {
       on_api_results(event.data.pluginMessage.original_task, event.data.pluginMessage.data);
     }
@@ -307,12 +370,20 @@
     if (event.data && event.data.pluginMessage.type === 'image_selected') {
       on_selected_image(event.data.pluginMessage.original_task, event.data.pluginMessage.data);
     }
+    if (event.data && event.data.pluginMessage.type === 'image_n_mask_selected') {
+      on_selected_image_n_mask(event.data.pluginMessage.original_task, event.data.pluginMessage.image, event.data.pluginMessage.mask);
+    }
     if (event.data && event.data.pluginMessage.type === 'sync_img2img_ui') {
-      setUiAvailiability(event.data.pluginMessage.selected_nodes_count);
+      selected_nodes_count = event.data.pluginMessage.selected_nodes_count;
+      setUiAvailiability();
     }
     if (event.data && event.data.pluginMessage.type === 'on_initialized') {
-      urlInput.value = event.data.pluginMessage.url;
-      apikeyInput.value = event.data.pluginMessage.api_key;
+      settings = JSON.parse(event.data.pluginMessage.settings);
+      url_input.value = settings.url;
+      api_key_input.value = settings.api_key;
+      styles_select.value = settings.style;
+      samplers_select.value = settings.sampler;
+      vectors_guidance_slider.value = settings.vectors_guidance;
       checkAvailibility();
       selected_nodes_count = event.data.pluginMessage.selected_nodes_count;
     }
@@ -320,10 +391,13 @@
       checkAvailibility();
       selected_nodes_count = event.data.pluginMessage.selected_nodes_count;
     }
-    if(event.data && event.data.pluginMessage.type === 'server_too_busy') {
+    if (event.data && event.data.pluginMessage.type === 'server_too_busy') {
       controlNetAvailable = false;
-      setUiAvailiability(0)
+      setUiAvailiability()
       serverLogLabel.innerHTML += "Server is busy.<br>";
+    }
+    if(event.data && event.data.pluginMessage.type === 'select_model_type'){
+      progressBar.value = 0;
     }
   });
 
@@ -335,57 +409,39 @@
       vectors_2_image()
     }
     if (event.shiftKey && event.key === "Enter") {
-      txt2img()
+      txt2img();
     }
   });
-
+  function initialize() {
+    const containerChildren = container.querySelectorAll("*");
+    for (const child of containerChildren) {
+      child.disabled = false;
+    }
+  }
   async function on_done(original_task) {
-    txt2imgButton.disabled = false;
-    renderSketchButton.disabled = false;
+    const containerChildren = container.querySelectorAll("*");
+    for (const child of containerChildren) {
+      child.disabled = false;
+    }
     generatingImage = false;
+    setUiAvailiability();
     clearInterval(realProgressInterval);
     clearInterval(fakeProgressInterval);
-    document.getElementById('progress').value = 1;
+    progressBar.value = 1;
     switch (original_task) {
       case "txt2img":
-        document.getElementById('progress').value = 1;
         if (keepGeneratingCheckbox.checked) txt2img();
         break;
       case "vectors_2_image":
-        document.getElementById('progress').value = 1;
         if (keepGeneratingCheckbox.checked) vectors_2_image();
         break;
-    }
-  }
-  async function on_api_results(original_task, data) {
-    let byte_array = null;
-    switch (original_task) {
-      case "prompt_mask":
-      case "txt2img":
-      case "auto_mask":
-      case "vectors_2_image":
-        byte_array = _base64ToUint8Array(data);
-        parent.postMessage({ pluginMessage: { type: 'create_image_node', original_task, byte_array } }, '*')
-        break;
-      case "get_canny":
-        image_2_vectors(data);
+      case "change_background":
+        if (keepGeneratingCheckbox.checked) change_background();
         break;
     }
   }
-  async function on_selected_image(original_task, data) {
-    switch (original_task) {
-      case "image_2_vectors":
-        get_canny(data, original_task);
-        break;
-      case "auto_mask":
-      case "prompt_mask":
-      case "vectors_2_image":
-        image2image(data, original_task);
-        break;
-    }
-  }
-  function image2image(data, original_task) {
-    var base64 = btoa(new Uint8Array(data).reduce((data, byte) => data + String.fromCharCode(byte), ''),);
+  function image2image(uint8array, original_task) {
+    var base64 = btoa(new Uint8Array(uint8array).reduce((data, byte) => data + String.fromCharCode(byte), ''),);
     const style = getSelectedStyle()
     const textbox_prompt = document.getElementById('prompt');
     const width_input = document.getElementById('width');
@@ -393,64 +449,137 @@
     const url = document.getElementById('url').value;
     const vectors_guidance = document.getElementById('vectors_guidance_slider').value;
     const mask_only = document.getElementById('mask_only').checked;
+    const step = document.getElementById('step_slider').value;
+    const sampler = document.getElementById('samplers').value;
 
     let seed = getSeed();
     let prompt = textbox_prompt.value;
     let width = width_input.value;
     let height = height_input.value;
-    const pluginMessage = { type: original_task, imageUrl: base64, prompt, width, height, style, url, vectors_guidance, mask_only, seed }
+    const pluginMessage = { type: original_task, imageUrl: base64, prompt, width, height, style, url, vectors_guidance, mask_only, seed, step, sampler }
     parent.postMessage({ pluginMessage }, '*')
   }
-  async function get_canny(data, original_task) {
-    var base64 = btoa(new Uint8Array(data).reduce((data, byte) => data + String.fromCharCode(byte), ''),);
-    const url = urlInput.value;
-    const canny_low_threshold = document.getElementById('canny_low_threshold_slider').value;
-    const canny_high_threshold = document.getElementById('canny_high_threshold_slider').value;
-    const pluginMessage = { type: "canny", original_task, imageUrl: base64, url, canny_low_threshold, canny_high_threshold }
-    parent.postMessage({ pluginMessage }, '*')
-  }
-  function image_2_vectors(base64String) {
-    let url = `data:image/png;base64,${base64String}`
-    const img = document.createElement('img');
-    img.src = url;
-    ImageTracer.imageToSVG(url, function (svgstr) {
-      const width_input = document.getElementById('width');
-      const height_input = document.getElementById('height');
-      let width = width_input.value;
-      let height = height_input.value;
-      parent.postMessage({ pluginMessage: { type: 'create_node_from_svg', svgstr, width, height } }, '*')
-    }, "posterized1");
-  }
-  async function txt2img() {
-    if (txt2imgButton.disabled) { return; }
-    if (await isQueueing()) return;
+  function image_n_mask2image(original_task, image, mask) {
+    var base64_image = btoa(new Uint8Array(image).reduce((data, byte) => data + String.fromCharCode(byte), ''),);
+    var base64_mask = btoa(new Uint8Array(mask).reduce((data, byte) => data + String.fromCharCode(byte), ''),);
     const style = getSelectedStyle()
     const textbox_prompt = document.getElementById('prompt');
     const width_input = document.getElementById('width');
     const height_input = document.getElementById('height');
     const url = document.getElementById('url').value;
+    const vectors_guidance = document.getElementById('vectors_guidance_slider').value;
+    const mask_only = document.getElementById('mask_only').checked;
+    const step = document.getElementById('step_slider').value;
+    const sampler = document.getElementById('samplers').value;
+
+    let seed = getSeed();
     let prompt = textbox_prompt.value;
     let width = width_input.value;
     let height = height_input.value;
-    let seed = getSeed();
-    parent.postMessage({ pluginMessage: { type: 'txt2img', prompt, width, height, style, url, seed } }, '*');
-    generatingImage = true;
-    setUiAvailiability();
-    document.getElementById('progress').value = 0;
-    realProgressInterval = setInterval(setProgress, realProgressUpdateTime);
-    fakeProgressInterval = setInterval(fakeProgress, fakeProgressUpdateTime);
+    const pluginMessage = { type: original_task, imageUrl: base64_image, maskUrl: base64_mask, prompt, width, height, style, url, vectors_guidance, mask_only, seed, step, sampler }
+    parent.postMessage({ pluginMessage }, '*')
+  }
+  async function get_canny(data, original_task) {
+    var base64 = btoa(new Uint8Array(data).reduce((data, byte) => data + String.fromCharCode(byte), ''),);
+    const url = url_input.value;
+    const canny_low_threshold = document.getElementById('canny_low_threshold_slider').value;
+    const canny_high_threshold = document.getElementById('canny_high_threshold_slider').value;
+    const pluginMessage = { type: "canny", original_task, imageUrl: base64, url, canny_low_threshold, canny_high_threshold }
+    parent.postMessage({ pluginMessage }, '*')
+  }
+
+  function getPluginMessage(type) {
+    const style = getSelectedStyle();
+    const url = url_input.value;
+    const api_key = api_key_input.value;
+    const prompt = textbox_prompt.value;
+    const width = width_input.value;
+    const height = height_input.value;
+    const vectors_guidance = vectors_guidance_slider.value;
+    const mask_only = mask_only_checkbox.checked;
+    const step = step_slider.value;
+    const sampler = samplers_select.value;
+    const canny_high_threshold = canny_high_threshold_slider.value;
+    const canny_low_threshold = canny_low_threshold_slider.value;
+    const seed = getSeed();
+    return {
+      type, prompt, width, height, style, url, api_key, vectors_guidance, mask_only, seed, step, sampler,
+      canny_high_threshold, canny_low_threshold
+    };
+  }
+  async function txt2img() {
+    if (txt2imgButton.disabled) { return; }
+    if (await isQueueing()) return;
+    const pluginMessage = getPluginMessage("txt2img");
+    parent.postMessage({ pluginMessage }, '*');
+    onGeneratingImage();
+  }
+  async function auto_mask() {
+    const pluginMessage = getPluginMessage("auto_mask");
+    parent.postMessage({ pluginMessage }, '*');
+    onGeneratingImage();
+  }
+  async function prompt_mask() {
+    const pluginMessage = getPluginMessage("prompt_mask");
+    parent.postMessage({ pluginMessage }, '*');
+    onGeneratingImage();
+  }
+  async function change_background() {
+    if (changeBackgroundButton.disabled) { return };
+    if (await isQueueing()) { return };
+    const pluginMessage = getPluginMessage("change_background");
+    parent.postMessage({ pluginMessage }, '*');
+    onGeneratingImage();
+  }
+  async function image_2_vectors() {
+    const pluginMessage = getPluginMessage("image_2_vectors");
+    parent.postMessage({ pluginMessage }, '*');
+    onGeneratingImage();
   }
   async function vectors_2_image() {
     if (renderSketchButton.disabled) { return };
     if (await isQueueing()) { return };
-    parent.postMessage({ pluginMessage: { type: 'get_selected_image', original_task: "vectors_2_image" } }, '*');
+    const pluginMessage = getPluginMessage("vectors_2_image");
+    parent.postMessage({ pluginMessage }, '*');
+    onGeneratingImage();
+  }
+
+  function onGeneratingImage() {
     generatingImage = true;
     setUiAvailiability();
-    document.getElementById('progress').value = 0;
-    realProgressInterval = setInterval(setProgress, realProgressUpdateTime);
+    progressBar.value = 0;
+    // realProgressInterval = setInterval(setProgress, realProgressUpdateTime);
     fakeProgressInterval = setInterval(fakeProgress, fakeProgressUpdateTime);
   }
-  function _base64ToUint8Array(base64) {
+  async function image_to_svg(imageURL) {
+    imageURL = `data:image/png;base64,${imageURL}`
+    ImageTracer.imageToSVG(imageURL, function (svgstr) {
+      const width_input = document.getElementById('width');
+      const height_input = document.getElementById('height');
+      let width = width_input.value;
+      let height = height_input.value;
+      parent.postMessage({ pluginMessage: { type: 'image_to_svg_result', svgstr, width, height } }, '*')
+    }, "posterized1");
+  }
+
+  function getCombineImages(imageURL1, imageURL2) {
+    const image1 = new Image();
+    image1.src = imageURL1;
+    const image2 = new Image();
+    image2.src = imageURL2;
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = image1.width;
+      canvas.height = image1.height;
+      ctx.drawImage(image1, 0, 0);
+      ctx.drawImage(image2, 0, 0);
+      canvas.toBlob((blob) => {
+        resolve(blob);
+      }, 'image/png');
+    });
+  }
+  function base64ToUint8Array(base64) {
     var binary_string = window.atob(base64);
     var len = binary_string.length;
     var bytes = new Uint8Array(len);
@@ -460,11 +589,11 @@
     return new Uint8Array(bytes.buffer);
   }
   function getSelectedStyle() {
-    return document.querySelector('input[name="style"]:checked').value;
+    return document.querySelector("#styles").value;
   }
   async function isQueueing() {
     let progressData = await throttledGetProgress();
-    if (!progressData||!progressData.state||progressData.state.job_count > 0) {
+    if (!progressData || !progressData.state || progressData.state.job_count > 0) {
       serverLogLabel.innerHTML = "";
       serverLogLabel.innerHTML += "Server is busy.<br>";
       return true;
@@ -472,31 +601,31 @@
     return false;
   }
   function fakeProgress() {
-    let progress = document.getElementById('progress').value;
+    let progress = progressBar.value;
     const maxFakeProgress = 0.95;
     if (progress < maxFakeProgress) {
       progress = progress + (1 - progress) * .1;
-      if(progress>maxFakeProgress) progress = maxFakeProgress;
-      document.getElementById('progress').value = progress;
+      if (progress > maxFakeProgress) progress = maxFakeProgress;
+      progressBar.value = progress;
     }
   }
   async function getProgress() {
     const url = document.getElementById('url').value;
-    const api_key = apikeyInput.value;
+    const api_key = api_key_input.value;
     let res = await fetch(`${url}/sdapi/v1/progress?skip_current_image=true`, { method: 'GET', headers: { Authorization: api_key } })
     return await res.json();
   }
   async function setProgress() {
     let data = await getProgress();
-    document.getElementById('progress').value = data.progress;
+    progressBar.value = data.progress;
     if (data.state.job_count == 0) {
       clearInterval(realProgressInterval);
       clearInterval(fakeProgressInterval);
-      document.getElementById('progress').value = 1;
+      progressBar.value = 1;
     }
     return data;
   }
-  function setUiAvailiability(selected_nodes_count = 0) {
+  function setUiAvailiability() {
     serverLogLabel.innerHTML = "";
     if (!sdServerAvailable) { txt2imgButton.disabled = true; serverLogLabel.innerHTML += "Not connected to any server yet<br>Try pressing the connect to demo server button<br>" } else txt2imgButton.disabled = false;
     if (!figmaAvailable) { serverLogLabel.innerHTML += "Can't find figma extension<br>" }
@@ -505,21 +634,22 @@
     if (!controlNetAvailable) { renderSketchButton.disabled = true; serverLogLabel.innerHTML += "Can't find control net extension<br>" }
 
     if (selected_nodes_count == 0) {
-      autoMaskButton.disabled = true;
-      promptMaskButton.disabled = true;
-      renderSketchButton.disabled = true;
-      image_2_vectorsButton.disabled = true;
-      findItemsButton.disabled = true;
+      for (const child of img_required_container.querySelectorAll("*")) {
+        child.disabled = true;
+      }
     } else if (selected_nodes_count > 0) {
-      image_2_vectorsButton.disabled = false;
-      findItemsButton.disabled = false;
+      for (const child of img_required_container.querySelectorAll("*")) {
+        child.disabled = false;
+      }
       if (autoMaskAvailable) autoMaskButton.disabled = false;
       if (promptMaskAvailable) promptMaskButton.disabled = false;
       if (controlNetAvailable) renderSketchButton.disabled = false;
     }
     if (generatingImage) {
-      txt2imgButton.disabled = true;
-      renderSketchButton.disabled = true;
+      const containerChildren = container.querySelectorAll("*");
+      for (const child of containerChildren) {
+        child.disabled = true;
+      }
     }
   }
   async function apiHaveResponse(url) {
@@ -535,17 +665,18 @@
     }
   }
   async function checkAvailibility() {
-    const url = urlInput.value;
-    const api_key = apikeyInput.value;
+    const url = url_input.value;
+    const api_key = api_key_input.value;
     connectionStatusLabel.innerHTML = "Checking connection...";
     sdServerAvailable = await apiHaveResponse(`${url}/app_id/`, { method: 'GET', headers: { Authorization: api_key } });
     autoMaskAvailable = await apiHaveResponse(`${url}/auto_mask/status`, { method: 'GET', headers: { Authorization: api_key } });
     figmaAvailable = await apiHaveResponse(`${url}/figma/status`, { method: 'GET', headers: { Authorization: api_key } });
     promptMaskAvailable = await apiHaveResponse(`${url}/prompt_mask/status`, { method: 'GET', headers: { Authorization: api_key } });
     controlNetAvailable = await apiHaveResponse(`${url}/controlnet/version`, { method: 'GET', headers: { Authorization: api_key } });
-    setUiAvailiability(0);
+    setUiAvailiability();
     connectionStatusLabel.innerHTML = "";
-    parent.postMessage({ pluginMessage: { type: 'check_availibility', original_task: "check_availibility", url } }, '*');
+    let pluginMessage = getPluginMessage("check_availibility");
+    parent.postMessage({ pluginMessage }, '*');
   }
   function getSeed() {
     function getRandomFullRangeInt() {
