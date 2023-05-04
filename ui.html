@@ -166,8 +166,8 @@
       </select>
     </div>
     <div>
-      <label id="step_label" for="step_slider">Step: 30</label>
-      <input type="range" id="step_slider" min="10" max="150" value="30" step="10">
+      <label id="step_label" for="step_slider">Step: 20</label>
+      <input type="range" id="step_slider" min="10" max="150" value="20" step="10">
     </div>
   </div>
   <label>Choose a Sampling method:</label>
@@ -216,7 +216,8 @@
         <fieldset>
           <legend>Rework Image</legend>
           <div class="row">
-            <input type="button" id="change_background" disabled value="Change Background" />
+            <input type="button" id="change_selected" disabled value="Rework Selected" />
+            <input type="button" id="change_background" disabled value="Rework Background" />
             <!-- <input type="button" id="beautify_edge" disabled value="Beautify Edge" /> -->
           </div>
         </fieldset>
@@ -255,6 +256,7 @@
   const autoMaskButton = document.getElementById('auto_mask');
   const promptMaskButton = document.getElementById('prompt_mask');
   const styles_select = document.getElementById('styles');
+  const change_selectedButton = document.getElementById('change_selected');
   const changeBackgroundButton = document.getElementById('change_background');
   const image_2_vectorsButton = document.getElementById('image_2_vectors');
   const vectors_guidance_slider = document.getElementById('vectors_guidance_slider');
@@ -309,7 +311,10 @@
   document.querySelector("#prompt_mask").addEventListener("click", (e) => {
     prompt_mask();
   });
-  document.querySelector("#change_background").addEventListener("click", (e) => {
+  change_selectedButton.addEventListener("click", (e) => {
+    change_selected();
+  });
+  changeBackgroundButton.addEventListener("click", (e) => {
     change_background();
   });
   document.querySelector("#vectors_2_image").addEventListener("click", (e) => {
@@ -375,6 +380,9 @@
     if (event.data && event.data.pluginMessage.type === 'done') {
       on_done(event.data.pluginMessage.original_task);
     }
+    if(event.data && event.data.pluginMessage.type === 'error'){
+      on_error(event.data.pluginMessage.original_task,event.data.pluginMessage.data);
+    }
     if (event.data && event.data.pluginMessage.type === 'image_selected') {
       on_selected_image(event.data.pluginMessage.original_task, event.data.pluginMessage.data);
     }
@@ -413,12 +421,12 @@
     if (event.key === "Escape") {
       parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*')
     }
-    if (event.key === "Enter") {
-      vectors_2_image()
-    }
-    if (event.shiftKey && event.key === "Enter") {
-      txt2img();
-    }
+    // if (event.key === "Enter") {
+    //   vectors_2_image()
+    // }
+    // if (event.shiftKey && event.key === "Enter") {
+    //   txt2img();
+    // }
   });
   function initialize() {
     const containerChildren = container.querySelectorAll("*");
@@ -438,7 +446,7 @@
     clearInterval(queueUpdateInterval);
     progressBar.value = 1;
     switch (original_task) {
-      case "txt2img":
+      case "txt2image":
         if (keepGeneratingCheckbox.checked) txt2img();
         break;
       case "vectors_2_image":
@@ -448,6 +456,19 @@
         if (keepGeneratingCheckbox.checked) change_background();
         break;
     }
+  }
+  async function on_error(original_task,message){
+    const containerChildren = container.querySelectorAll("*");
+    for (const child of containerChildren) {
+      child.disabled = false;
+    }
+    generatingImage = false;
+    setUiAvailiability();
+    clearInterval(realProgressInterval);
+    clearInterval(fakeProgressInterval);
+    clearInterval(queueUpdateInterval);
+    progressBar.value = 1;
+    keepGeneratingCheckbox.checked=false;
   }
   function image2image(uint8array, original_task) {
     var base64 = btoa(new Uint8Array(uint8array).reduce((data, byte) => data + String.fromCharCode(byte), ''),);
@@ -517,7 +538,7 @@
     };
   }
   async function txt2img() {
-    if (txt2imgButton.disabled) { return; }
+    // if (txt2imgButton.disabled) { return; }
     const pluginMessage = getPluginMessage("txt2img");
     parent.postMessage({ pluginMessage }, '*');
     onGeneratingImage();
@@ -532,8 +553,13 @@
     parent.postMessage({ pluginMessage }, '*');
     onGeneratingImage();
   }
+  async function change_selected(){
+    const pluginMessage = getPluginMessage("change_selected");
+    parent.postMessage({ pluginMessage }, '*');
+    onGeneratingImage();
+  }
   async function change_background() {
-    if (changeBackgroundButton.disabled) { return };
+    // if (changeBackgroundButton.disabled) { return };
     const pluginMessage = getPluginMessage("change_background");
     parent.postMessage({ pluginMessage }, '*');
     onGeneratingImage();
@@ -544,7 +570,7 @@
     onGeneratingImage();
   }
   async function vectors_2_image() {
-    if (renderSketchButton.disabled) { return };
+    // if (renderSketchButton.disabled) { return };
     const pluginMessage = getPluginMessage("vectors_2_image");
     parent.postMessage({ pluginMessage }, '*');
     onGeneratingImage();

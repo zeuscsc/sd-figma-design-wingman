@@ -109,39 +109,53 @@ const archiveFigmaUiMessageHandler = async (msg: any) => {
     figma.closePlugin();
 };
 const figmaUiMessageHandler = async (msg: Cache) => {
-  const merge = Object.assign({}, cache, msg, keep_aspect_ratio(cache.width, cache.height));
+  const size={width:cache.width,height:cache.height};
+  if(figma.currentPage.selection.length>0){
+    size.width=figma.currentPage.selection[0].width;
+    size.height=figma.currentPage.selection[0].height;
+  }
+  const merge = Object.assign({}, cache, msg, keep_aspect_ratio(size.width, size.height));
   Object.assign(cache, merge)
   const type = msg.type;
-  cache.used_base_model = await get_loaded_model();
-  cache.model_type = get_model_type(cache.used_base_model);
-  switch (type) {
-    case "check_availibility":
-      await control_net_for_sketch_picker();
-      break;
-    case "txt2img":
-      if (cache.model_type !== RENDER_MODEL_TYPE) await select_model_type(RENDER_MODEL_TYPE);
-      await txt2img();
-      break;
-    case "auto_mask":
-      await auto_mask();
-      break;
-    case "prompt_mask":
-      await prompt_mask();
-      break;
-    case "change_background":
-      if (cache.model_type !== INPAINT_MODEL_TYPE) await select_model_type(INPAINT_MODEL_TYPE);
-      await change_background();
-      break;
-    case "image_2_vectors":
-      await image_2_vectors();
-      break;
-    case "vectors_2_image":
-      if (cache.model_type !== RENDER_MODEL_TYPE) await select_model_type(RENDER_MODEL_TYPE);
-      await vectors_2_image();
-      break;
-    case "find_items":
-      if (figma.currentPage.selection.length > 0) figma.viewport.scrollAndZoomIntoView(figma.currentPage.selection);
-      break;
+  try{
+    cache.used_base_model = await get_loaded_model();
+    cache.model_type = get_model_type(cache.used_base_model);
+    switch (type) {
+      case "check_availibility":
+        await control_net_for_sketch_picker();
+        break;
+      case "txt2img":
+        if (cache.model_type !== RENDER_MODEL_TYPE) await select_model_type(RENDER_MODEL_TYPE);
+        await txt2image();
+        break;
+      case "auto_mask":
+        await auto_mask();
+        break;
+      case "prompt_mask":
+        await prompt_mask();
+        break;
+      case "change_selected":
+        if (cache.model_type !== RENDER_MODEL_TYPE) await select_model_type(RENDER_MODEL_TYPE);
+        await change_selected();
+        break;
+      case "change_background":
+        if (cache.model_type !== INPAINT_MODEL_TYPE) await select_model_type(INPAINT_MODEL_TYPE);
+        await change_background();
+        break;
+      case "image_2_vectors":
+        await image_2_vectors();
+        break;
+      case "vectors_2_image":
+        if (cache.model_type !== RENDER_MODEL_TYPE) await select_model_type(RENDER_MODEL_TYPE);
+        await vectors_2_image();
+        break;
+      case "find_items":
+        if (figma.currentPage.selection.length > 0) figma.viewport.scrollAndZoomIntoView(figma.currentPage.selection);
+        break;
+    }
+  }catch(e:any){
+    console.log(e)
+    figma.ui.postMessage({ type: 'error', message: e });
   }
   settings = Settings.getInstance(cache);
   await settings.save();
@@ -243,7 +257,7 @@ function svg_results(svg: string, width: number = 512, height: number = 512) {
   figma.viewport.scrollAndZoomIntoView(nodes);
   figma.ui.postMessage({ type: 'done' });
 }
-async function txt2img() {
+async function txt2image() {
   let prompt = get_styled_prompt(cache.prompt, cache.style);
   let query: any = {
     "prompt": prompt,
@@ -295,8 +309,15 @@ async function prompt_mask() {
   const byte_array = await base64_to_Uint8Array(base64);
   create_image_node("prompt_mask", byte_array);
 }
+async function change_selected(){
+  await masked_img2img("change_selected",0.75,0,1);
+}
 async function change_background() {
+  await masked_img2img("change_background",1,1,3);
+}
+async function masked_img2img(original_task: string,denoising_strength=1,inpainting_mask_invert=0,inpainting_fill=1) {
   let prompt = get_styled_prompt(cache.prompt, cache.style);
+  const snapshotSize={width:cache.width,height:cache.height};
   const selectedNode = figma.currentPage.selection[0];
   const uint8array = await extract_uint8array_from_image_node(selectedNode);
   const imageUrl = await Uint8Array_to_base64(uint8array);
@@ -312,17 +333,17 @@ async function change_background() {
     "init_images": [imageUrl],
     "resize_mode": 0,
     "mask_blur": 1,
-    "denoising_strength": 1,
+    "denoising_strength": denoising_strength,
     "mask": maskUrl,
-    "inpainting_fill": 3,
-    "inpainting_mask_invert": 1,
+    "inpainting_fill": inpainting_fill,
+    "inpainting_mask_invert": inpainting_mask_invert,
     "prompt": prompt,
     "negative_prompt": default_bad_prompt,
     "steps": cache.step,
     "sampler_index": cache.sampler,
     "cfg_scale": 7,
-    "width": cache.width,
-    "height": cache.height,
+    "width": snapshotSize.width,
+    "height": snapshotSize.height,
     "seed": cache.seed,
   }
   let res = await fetch(`${settings.url}/sdapi/v1/img2img`, {
@@ -331,9 +352,29 @@ async function change_background() {
     body: JSON.stringify(query)
   });
   let data = await res.json();
-  const base64 = data['images'][0];
+  let base64 = data['images'][0];
+  query={
+    "init_images": [base64],
+    "resize_mode": 0,
+    "denoising_strength": 0.15,
+    "prompt": prompt,
+    "negative_prompt": default_bad_prompt,
+    "steps": cache.step,
+    "sampler_index": cache.sampler,
+    "cfg_scale": 7,
+    "width": snapshotSize.width,
+    "height": snapshotSize.height,
+    "seed": cache.seed,
+  }
+  res = await fetch(`${settings.url}/sdapi/v1/img2img`, {
+    method: 'POST',
+    headers: settings.getHeaders(),
+    body: JSON.stringify(query)
+  });
+  data = await res.json();
+  base64 = data['images'][0];
   const byte_array = await base64_to_Uint8Array(base64);
-  create_image_node("change_background", byte_array, selectedNode.width, selectedNode.height);
+  create_image_node(original_task, byte_array, selectedNode.width, selectedNode.height);
 }
 async function image_2_vectors() {
   let width = figma.currentPage.selection[0].width;
