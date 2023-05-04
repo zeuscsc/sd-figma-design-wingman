@@ -157,6 +157,12 @@
         <option value="sticker">Sticker</option>
         <option value="anime">Anime</option>
         <option value="studio">Studio</option>
+        <option value="illustration">Illustration</option>
+        <option value="logo">Logo</option>
+        <option value="artistic">Artistic</option>
+        <option value="tattoo">Tattoo</option>
+        <option value="gothic">Gothic</option>
+        <option value="cartoon">Cartoon</option>
       </select>
     </div>
     <div>
@@ -268,6 +274,8 @@
   let realProgressInterval = null;
   let fakeProgressUpdateTime = TickPeriod * 1;
   let fakeProgressInterval = null;
+  let queueUpdateTime=TickPeriod*50;
+  let queueUpdateInterval=null;
   let sdServerAvailable = false;
   let autoMaskAvailable = false;
   let figmaAvailable = false;
@@ -427,6 +435,7 @@
     setUiAvailiability();
     clearInterval(realProgressInterval);
     clearInterval(fakeProgressInterval);
+    clearInterval(queueUpdateInterval);
     progressBar.value = 1;
     switch (original_task) {
       case "txt2img":
@@ -509,7 +518,6 @@
   }
   async function txt2img() {
     if (txt2imgButton.disabled) { return; }
-    if (await isQueueing()) return;
     const pluginMessage = getPluginMessage("txt2img");
     parent.postMessage({ pluginMessage }, '*');
     onGeneratingImage();
@@ -526,7 +534,6 @@
   }
   async function change_background() {
     if (changeBackgroundButton.disabled) { return };
-    if (await isQueueing()) { return };
     const pluginMessage = getPluginMessage("change_background");
     parent.postMessage({ pluginMessage }, '*');
     onGeneratingImage();
@@ -538,18 +545,19 @@
   }
   async function vectors_2_image() {
     if (renderSketchButton.disabled) { return };
-    if (await isQueueing()) { return };
     const pluginMessage = getPluginMessage("vectors_2_image");
     parent.postMessage({ pluginMessage }, '*');
     onGeneratingImage();
   }
 
-  function onGeneratingImage() {
+  async function onGeneratingImage() {
     generatingImage = true;
     setUiAvailiability();
+    await isQueueing();
     progressBar.value = 0;
-    // realProgressInterval = setInterval(setProgress, realProgressUpdateTime);
+    realProgressInterval = setInterval(setProgress, realProgressUpdateTime);
     fakeProgressInterval = setInterval(fakeProgress, fakeProgressUpdateTime);
+    queueUpdateInterval = setInterval(isQueueing, queueUpdateTime);
   }
   async function image_to_svg(imageURL) {
     imageURL = `data:image/png;base64,${imageURL}`
@@ -594,8 +602,7 @@
   async function isQueueing() {
     let progressData = await throttledGetProgress();
     if (!progressData || !progressData.state || progressData.state.job_count > 0) {
-      serverLogLabel.innerHTML = "";
-      serverLogLabel.innerHTML += "Server is busy.<br>";
+      serverLogLabel.innerHTML += `Server is busy, there are ${progressData.state.job_count} paid user's jobs before you.<br>`;
       return true;
     }
     return false;
@@ -621,6 +628,7 @@
     if (data.state.job_count == 0) {
       clearInterval(realProgressInterval);
       clearInterval(fakeProgressInterval);
+      clearInterval(queueUpdateInterval);
       progressBar.value = 1;
     }
     return data;

@@ -23,7 +23,7 @@ class Cache {
 class Settings extends Cache {
   static getInstance(cache: Cache) {
     settings = new Settings();
-    const merge=Object.assign({},settings,cache);
+    const merge = Object.assign({}, settings, cache);
     Object.assign(settings, merge);
     return settings;
   }
@@ -109,17 +109,17 @@ const archiveFigmaUiMessageHandler = async (msg: any) => {
     figma.closePlugin();
 };
 const figmaUiMessageHandler = async (msg: Cache) => {
-  const merge=Object.assign({},cache,msg,keep_aspect_ratio(cache.width,cache.height));
-  Object.assign(cache,merge)
+  const merge = Object.assign({}, cache, msg, keep_aspect_ratio(cache.width, cache.height));
+  Object.assign(cache, merge)
   const type = msg.type;
   cache.used_base_model = await get_loaded_model();
-  cache.model_type=get_model_type(cache.used_base_model);
+  cache.model_type = get_model_type(cache.used_base_model);
   switch (type) {
     case "check_availibility":
       await control_net_for_sketch_picker();
       break;
     case "txt2img":
-      if(cache.model_type!==RENDER_MODEL_TYPE)await select_model_type(RENDER_MODEL_TYPE);
+      if (cache.model_type !== RENDER_MODEL_TYPE) await select_model_type(RENDER_MODEL_TYPE);
       await txt2img();
       break;
     case "auto_mask":
@@ -129,14 +129,14 @@ const figmaUiMessageHandler = async (msg: Cache) => {
       await prompt_mask();
       break;
     case "change_background":
-      if(cache.model_type!==INPAINT_MODEL_TYPE)await select_model_type(INPAINT_MODEL_TYPE);
+      if (cache.model_type !== INPAINT_MODEL_TYPE) await select_model_type(INPAINT_MODEL_TYPE);
       await change_background();
       break;
     case "image_2_vectors":
       await image_2_vectors();
       break;
     case "vectors_2_image":
-      if(cache.model_type!==RENDER_MODEL_TYPE)await select_model_type(RENDER_MODEL_TYPE);
+      if (cache.model_type !== RENDER_MODEL_TYPE) await select_model_type(RENDER_MODEL_TYPE);
       await vectors_2_image();
       break;
     case "find_items":
@@ -153,8 +153,8 @@ figma.on('selectionchange', () => {
 });
 async function initialize() {
   await settings.load();
-  const merge=Object.assign({},cache,settings);
-  Object.assign(cache,merge)
+  const merge = Object.assign({}, cache, settings);
+  Object.assign(cache, merge)
   settings = Settings.getInstance(cache);
   const selection = figma.currentPage.selection;
   figma.ui.postMessage({ type: 'on_initialized', selected_nodes_count: selection.length, settings: JSON.stringify(settings) });
@@ -184,7 +184,7 @@ function Uint8Array_to_base64(uint8array: Uint8Array) {
     figma.ui.postMessage({ type: "Uint8Array_to_base64", uint8array });
   });
 }
-function combine_images(background_url:string,foreground_url:string){
+function combine_images(background_url: string, foreground_url: string) {
   return new Promise<string>((resolve) => {
     function handleMessage(msg: any) {
       if (msg.type === "combine_images_result") {
@@ -193,10 +193,10 @@ function combine_images(background_url:string,foreground_url:string){
       }
     }
     figma.ui.onmessage = handleMessage;
-    figma.ui.postMessage({ type: "combine_images",background_url,foreground_url});
+    figma.ui.postMessage({ type: "combine_images", background_url, foreground_url });
   });
 }
-function image_to_svg(base64:string){
+function image_to_svg(base64: string) {
   return new Promise<string>((resolve) => {
     function handleMessage(msg: any) {
       if (msg.type === "image_to_svg_result") {
@@ -205,7 +205,7 @@ function image_to_svg(base64:string){
       }
     }
     figma.ui.onmessage = handleMessage;
-    figma.ui.postMessage({ type: "image_to_svg",base64});
+    figma.ui.postMessage({ type: "image_to_svg", base64 });
   });
 }
 async function select_model_type(model_type: string) {
@@ -268,7 +268,7 @@ async function txt2img() {
 async function auto_mask() {
   const uint8array = await figma.currentPage.selection[0].exportAsync({ format: "PNG", constraint: { type: "SCALE", value: 1 } })
   const imageUrl = await Uint8Array_to_base64(uint8array)
-  const base64=await get_auto_mask(imageUrl,cache.mask_only);
+  const base64 = await get_auto_mask(imageUrl, cache.mask_only);
   const byte_array = await base64_to_Uint8Array(base64);
   create_image_node("auto_mask", byte_array);
 }
@@ -301,10 +301,10 @@ async function change_background() {
   const uint8array = await extract_uint8array_from_image_node(selectedNode);
   const imageUrl = await Uint8Array_to_base64(uint8array);
   let maskUrl;
-  if(figma.currentPage.selection.length<2){
-    maskUrl=await get_auto_mask(imageUrl,true);
-  }else{
-    const selectedMask=figma.currentPage.selection[1];
+  if (figma.currentPage.selection.length < 2) {
+    maskUrl = await get_auto_mask(imageUrl, true);
+  } else {
+    const selectedMask = figma.currentPage.selection[1];
     const uint8array = await extract_uint8array_from_image_node(selectedMask);
     maskUrl = await Uint8Array_to_base64(uint8array);
   }
@@ -333,16 +333,16 @@ async function change_background() {
   let data = await res.json();
   const base64 = data['images'][0];
   const byte_array = await base64_to_Uint8Array(base64);
-  create_image_node("change_background", byte_array,selectedNode.width,selectedNode.height);
+  create_image_node("change_background", byte_array, selectedNode.width, selectedNode.height);
 }
-async function image_2_vectors(){
+async function image_2_vectors() {
   let width = figma.currentPage.selection[0].width;
   let height = figma.currentPage.selection[0].height;
   const uint8array = await figma.currentPage.selection[0].exportAsync({ format: "PNG", constraint: { type: "SCALE", value: 1 } });
   const imageUrl = await Uint8Array_to_base64(uint8array);
-  const canny=await get_canny(imageUrl,cache.canny_low_threshold,cache.canny_high_threshold);
-  const svgstr=await image_to_svg(canny);
-  create_node_from_svg("image_2_vectors",svgstr,width,height);
+  const canny = await get_canny(imageUrl, cache.canny_low_threshold, cache.canny_high_threshold);
+  const svgstr = await image_to_svg(canny);
+  create_node_from_svg("image_2_vectors", svgstr, width, height);
 }
 async function vectors_2_image() {
   const selectedNode = figma.currentPage.selection[0];
@@ -380,10 +380,10 @@ async function vectors_2_image() {
   const data = await res.json();
   const base64 = data['images'][0];
   const byte_array = await base64_to_Uint8Array(base64);
-  create_image_node("vectors_2_image", byte_array,selectedNode.width,selectedNode.height);
+  create_image_node("vectors_2_image", byte_array, selectedNode.width, selectedNode.height);
 }
 
-async function beautify_mask_edge(){
+async function beautify_mask_edge() {
   let prompt = get_styled_prompt(cache.prompt, cache.style);
   const selectedNode = figma.currentPage.selection[0];
   const uint8array = await extract_uint8array_from_image_node(selectedNode);
@@ -409,9 +409,9 @@ async function beautify_mask_edge(){
   const data = await res.json();
   const base64 = data['mask'];
   const byte_array = await base64_to_Uint8Array(base64);
-  create_image_node("beautify_mask_edge", byte_array,selectedNode.width,selectedNode.height);
+  create_image_node("beautify_mask_edge", byte_array, selectedNode.width, selectedNode.height);
 }
-async function get_auto_mask(imageUrl:string,mask_only:boolean){
+async function get_auto_mask(imageUrl: string, mask_only: boolean) {
   let query: any = {
     "image_str": imageUrl,
     "alpha_matting": false,
@@ -448,6 +448,7 @@ async function get_canny(imageUrl: string, canny_low_threshold: number, canny_hi
   return base64;
 }
 function get_styled_prompt(prompt: string, style: string) {
+  const BASE_PROMPT = ",(((lineart))),((low detail)),(simple),high contrast,sharp,2 bit"
   switch (style) {
     case "photo":
       prompt = `.photo realistic, ultra details, natural light,
@@ -458,17 +459,17 @@ function get_styled_prompt(prompt: string, style: string) {
       break;
     case "icon":
       prompt = `${prompt}
-        ,(((lineart))),((low detail)),(simple),high contrast,sharp,2 bit,(((centered vector graphic logo))),negative space,stencil,trending on dribbble`
+        ${BASE_PROMPT},(((centered vector graphic logo))),negative space,stencil,trending on dribbble`
       break;
     case "sticker":
       prompt = `${prompt}
       ,(Die-cut sticker, kawaii sticker,contrasting background, illustration minimalism, vector, pastel colors)
-      `
+      `;
       break;
     case "anime":
       prompt = `${prompt}
-      ,(((lineart))),((low detail)),(simple),high contrast,sharp,2 bit,(((gothic ink on paper))),H.P. Lovecraft,Arthur Rackham
-      `
+      ${BASE_PROMPT},(((clean ink anime illustration))),Studio Ghibli,Makoto Shinkai,Hayao Miyazaki,Audrey Kawasaki
+      `;
       break;
     case "studio":
       prompt = `.photo realistic, ultra details, natural light,
@@ -478,6 +479,35 @@ function get_styled_prompt(prompt: string, style: string) {
       sony a7, 50 mm, hyperrealistic, big depth of field, concept art, colors, hyperdetailed, hyperrealistic) , ((moody lighting)), (fog), (ambient light)
       `;
       break;
+    case "illustration":
+      prompt = `${prompt}
+        ${BASE_PROMPT},(((vector graphic))),medium detail
+        `;
+      break;
+    case "logo":
+      prompt = `${prompt}
+          ${BASE_PROMPT},(((centered vector graphic logo))),negative space,stencil,trending on dribbble
+          `;
+      break;
+    case "artistic":
+      prompt = `${prompt}
+            ${BASE_PROMPT},(((artistic monochrome painting))),precise lineart,negative space
+            `;
+      break;
+    case "tattoo":
+      prompt = `${prompt}
+              ${BASE_PROMPT},(((tattoo template, ink on paper))),uniform lighting,lineart,negative space
+              `;
+      break;
+    case "gothic":
+      prompt = `${prompt}
+                ${BASE_PROMPT},(((gothic ink on paper))),H.P. Lovecraft,Arthur Rackham
+                `;
+      break;
+    case "cartoon":
+      prompt = `${prompt}
+                  ${BASE_PROMPT},(((clean ink funny comic cartoon illustration)))
+                  `;
     default:
       break;
   }
@@ -485,10 +515,10 @@ function get_styled_prompt(prompt: string, style: string) {
 
   return prompt;
 }
-async function create_image_node(original_task: string, byte_array: Uint8Array,width=-1,height=-1) {
+async function create_image_node(original_task: string, byte_array: Uint8Array, width = -1, height = -1) {
   const imageNode = figma.createRectangle();
   const image = await figma.createImage(byte_array);
-  if(width===-1||height===-1) {let size = await image.getSizeAsync();width=size.width;height=size.height;}
+  if (width === -1 || height === -1) { let size = await image.getSizeAsync(); width = size.width; height = size.height; }
   imageNode.resize(width, height);
   imageNode.fills = [
     {
@@ -502,7 +532,7 @@ async function create_image_node(original_task: string, byte_array: Uint8Array,w
   imageNode.y = figma.viewport.center.y - height / 2;
   figma.ui.postMessage({ original_task, type: 'done' });
 }
-async function create_node_from_svg(original_task:string,svgstr:string, width:number, height:number) {
+async function create_node_from_svg(original_task: string, svgstr: string, width: number, height: number) {
   const node = figma.createNodeFromSvg(svgstr);
   node.x = figma.viewport.center.x - width / 2;
   node.y = figma.viewport.center.y - height / 2;
@@ -527,7 +557,7 @@ function keep_aspect_ratio(width: number, height: number) {
     height = height;
     width = newWidth;
   }
-  return {width, height}
+  return { width, height }
 }
 async function get_loaded_model() {
   if (settings.url === "") return
@@ -536,8 +566,8 @@ async function get_loaded_model() {
   let options = await res.json();
   return options['sd_model_checkpoint'];
 }
-function get_model_type(model_name:string){
-  if(/inpaint/.test(model_name)) return INPAINT_MODEL_TYPE
+function get_model_type(model_name: string) {
+  if (/inpaint/.test(model_name)) return INPAINT_MODEL_TYPE
   return RENDER_MODEL_TYPE
 }
 async function control_net_for_sketch_picker() {
@@ -559,7 +589,7 @@ async function control_net_for_sketch_picker() {
   }
 }
 
-async function extract_uint8array_from_image_node(node:SceneNode){
+async function extract_uint8array_from_image_node(node: SceneNode) {
   const width = node.width;
   const height = node.height;
   let uint8array = null;
@@ -569,12 +599,12 @@ async function extract_uint8array_from_image_node(node:SceneNode){
     node.type === "POLYGON" ||
     node.type === "STAR" ||
     node.type === "VECTOR"
-  ){
+  ) {
     node.resize(cache.width, cache.height);
-    uint8array=await node.exportAsync({ format: "PNG", constraint: { type: "SCALE", value: 1 } });
+    uint8array = await node.exportAsync({ format: "PNG", constraint: { type: "SCALE", value: 1 } });
     node.resize(width, height);
-  }else{
-    uint8array=await node.exportAsync({ format: "PNG", constraint: { type: "SCALE", value: 1 } });
+  } else {
+    uint8array = await node.exportAsync({ format: "PNG", constraint: { type: "SCALE", value: 1 } });
   }
   return uint8array;
 }
