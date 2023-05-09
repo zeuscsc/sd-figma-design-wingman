@@ -146,7 +146,7 @@ const figmaUiMessageHandler = async (msg: Cache) => {
         break;
       case "change_background":
         if(cache.selected_model_type ===INPAINT_MODEL_TYPE)if (cache.current_model_type !== INPAINT_MODEL_TYPE) await select_model_type(INPAINT_MODEL_TYPE);
-        if(cache.selected_model_type !==RENDER_MODEL_TYPE) if (cache.current_model_type !== RENDER_MODEL_TYPE) await select_model_type(RENDER_MODEL_TYPE);
+        if(cache.selected_model_type ===RENDER_MODEL_TYPE) if (cache.current_model_type !== RENDER_MODEL_TYPE) await select_model_type(RENDER_MODEL_TYPE);
         await change_background();
         break;
       case "image_2_vectors":
