@@ -42,6 +42,12 @@
       height: 16px;
       margin-right: 5px;
     }
+    input[type="radio"] {
+      width: 16px;
+      height: 16px;
+      margin-right: 5px;
+    }
+
 
     label span {
       line-height: 1.2;
@@ -220,6 +226,8 @@
             <input type="button" id="change_background" disabled value="Rework Background" />
             <!-- <input type="button" id="beautify_edge" disabled value="Beautify Edge" /> -->
           </div>
+          <label id="denoise_label" for="denoise_slider">Denoise: 0.75</label>
+          <input type="range" id="denoise_slider" min="0" max="1" value="0.75" step="0.05">
         </fieldset>
         <fieldset>
           <legend>Remove Background</legend>
@@ -228,6 +236,11 @@
           <div class="row">
           </div>
           <label><input type="checkbox" class="checkbox" id="mask_only"><span>Mask Only</span></label>
+          <fieldset>
+            <legend>Choose a mode:</legend>
+            <div class="row"><input type="radio" id="render" name="mode" value="render"><label for="render">Render Mode</label></div>
+            <div class="row"><input type="radio" id="inpaint" name="mode" value="inpaint"><label for="inpaint">Inpaint Mode</label></div>
+          </fieldset>
         </fieldset>
       </div>
       <div class="row">
@@ -258,6 +271,8 @@
   const styles_select = document.getElementById('styles');
   const change_selectedButton = document.getElementById('change_selected');
   const changeBackgroundButton = document.getElementById('change_background');
+  const denoise_slider = document.getElementById('denoise_slider');
+  const mode_options = document.getElementById('mode');
   const image_2_vectorsButton = document.getElementById('image_2_vectors');
   const vectors_guidance_slider = document.getElementById('vectors_guidance_slider');
   const mask_only_checkbox = document.getElementById('mask_only');
@@ -317,30 +332,65 @@
   changeBackgroundButton.addEventListener("click", (e) => {
     change_background();
   });
+  function setDenoiseLabel(value){
+    const denoise_label = document.querySelector("#denoise_label");
+    switch (value) {
+      case "0":
+        denoise_label.textContent = `Denoise: Same`;
+        break;
+      case "0.25":
+        denoise_label.textContent = `Denoise: Warp a bit`;
+        break;
+      case "0.5":
+        denoise_label.textContent = `Denoise: Medium`;
+        break;
+      case "0.75":
+        denoise_label.textContent = `Denoise: Hard to Recognize`;
+        break;
+      case "1":
+        denoise_label.textContent = `Denoise: Not Recognizeable`;
+        break;
+    }
+    const regex = /-\s*\d+(\.\d+)?/g;
+    denoise_label.textContent = denoise_label.textContent.replace(regex, "");
+    denoise_label.textContent += ` - ${value}`;
+  }
+  setDenoiseLabel(denoise_slider.value);
+  denoise_slider.addEventListener("input",(e)=>{
+    setDenoiseLabel(e.target.value);
+  })
   document.querySelector("#vectors_2_image").addEventListener("click", (e) => {
     vectors_2_image();
   });
   document.querySelector("#find_items").addEventListener("click", (e) => {
     parent.postMessage({ pluginMessage: { type: 'find_items', original_task: "find_items" } }, '*')
   });
-  document.querySelector("#vectors_guidance_slider").addEventListener("input", (e) => {
-    switch (e.target.value) {
+  function setVectorGuidanceLabel(value){
+    const vectors_guidance_label = document.querySelector("#vectors_guidance_label");
+    switch (value) {
       case "0":
-        document.querySelector("#vectors_guidance_label").textContent = `Vectors Guidance: None`;
+        vectors_guidance_label.textContent = `Vectors Guidance: None`;
         break;
       case "0.5":
-        document.querySelector("#vectors_guidance_label").textContent = `Vectors Guidance: Free`;
+        vectors_guidance_label.textContent = `Vectors Guidance: Free`;
         break;
       case "1":
-        document.querySelector("#vectors_guidance_label").textContent = `Vectors Guidance: Normal`;
+        vectors_guidance_label.textContent = `Vectors Guidance: Normal`;
         break;
       case "1.5":
-        document.querySelector("#vectors_guidance_label").textContent = `Vectors Guidance: Details`;
+        vectors_guidance_label.textContent = `Vectors Guidance: Details`;
         break;
       case "2":
-        document.querySelector("#vectors_guidance_label").textContent = `Vectors Guidance: Same`;
+        vectors_guidance_label.textContent = `Vectors Guidance: Same`;
         break;
     }
+    const regex = /-\s*\d+(\.\d+)?/g;
+    vectors_guidance_label.textContent = vectors_guidance_label.textContent.replace(regex, "");
+    vectors_guidance_label.textContent += ` - ${value}`;
+  }
+  setVectorGuidanceLabel(vectors_guidance_slider.value);
+  document.querySelector("#vectors_guidance_slider").addEventListener("input", (e) => {
+    setVectorGuidanceLabel(e.target.value);
   });
   document.querySelector("#canny_high_threshold_slider").addEventListener("input", (e) => {
     document.querySelector("#canny_high_threshold_label").textContent = `High Threshold: ${e.target.value}`;
@@ -470,45 +520,6 @@
     progressBar.value = 1;
     keepGeneratingCheckbox.checked=false;
   }
-  function image2image(uint8array, original_task) {
-    var base64 = btoa(new Uint8Array(uint8array).reduce((data, byte) => data + String.fromCharCode(byte), ''),);
-    const style = getSelectedStyle()
-    const textbox_prompt = document.getElementById('prompt');
-    const width_input = document.getElementById('width');
-    const height_input = document.getElementById('height');
-    const url = document.getElementById('url').value;
-    const vectors_guidance = document.getElementById('vectors_guidance_slider').value;
-    const mask_only = document.getElementById('mask_only').checked;
-    const step = document.getElementById('step_slider').value;
-    const sampler = document.getElementById('samplers').value;
-
-    let seed = getSeed();
-    let prompt = textbox_prompt.value;
-    let width = width_input.value;
-    let height = height_input.value;
-    const pluginMessage = { type: original_task, imageUrl: base64, prompt, width, height, style, url, vectors_guidance, mask_only, seed, step, sampler }
-    parent.postMessage({ pluginMessage }, '*')
-  }
-  function image_n_mask2image(original_task, image, mask) {
-    var base64_image = btoa(new Uint8Array(image).reduce((data, byte) => data + String.fromCharCode(byte), ''),);
-    var base64_mask = btoa(new Uint8Array(mask).reduce((data, byte) => data + String.fromCharCode(byte), ''),);
-    const style = getSelectedStyle()
-    const textbox_prompt = document.getElementById('prompt');
-    const width_input = document.getElementById('width');
-    const height_input = document.getElementById('height');
-    const url = document.getElementById('url').value;
-    const vectors_guidance = document.getElementById('vectors_guidance_slider').value;
-    const mask_only = document.getElementById('mask_only').checked;
-    const step = document.getElementById('step_slider').value;
-    const sampler = document.getElementById('samplers').value;
-
-    let seed = getSeed();
-    let prompt = textbox_prompt.value;
-    let width = width_input.value;
-    let height = height_input.value;
-    const pluginMessage = { type: original_task, imageUrl: base64_image, maskUrl: base64_mask, prompt, width, height, style, url, vectors_guidance, mask_only, seed, step, sampler }
-    parent.postMessage({ pluginMessage }, '*')
-  }
   async function get_canny(data, original_task) {
     var base64 = btoa(new Uint8Array(data).reduce((data, byte) => data + String.fromCharCode(byte), ''),);
     const url = url_input.value;
@@ -529,12 +540,14 @@
     const mask_only = mask_only_checkbox.checked;
     const step = step_slider.value;
     const sampler = samplers_select.value;
+    const denoising_strength=denoise_slider.value;
+    const selected_model_type = getSelectedMode();
     const canny_high_threshold = canny_high_threshold_slider.value;
     const canny_low_threshold = canny_low_threshold_slider.value;
     const seed = getSeed();
     return {
-      type, prompt, width, height, style, url, api_key, vectors_guidance, mask_only, seed, step, sampler,
-      canny_high_threshold, canny_low_threshold
+      type, prompt, width, height, style, url, api_key, vectors_guidance, mask_only, seed, step, sampler,denoising_strength,
+      model,canny_high_threshold, canny_low_threshold
     };
   }
   async function txt2img() {
@@ -711,6 +724,16 @@
     connectionStatusLabel.innerHTML = "";
     let pluginMessage = getPluginMessage("check_availibility");
     parent.postMessage({ pluginMessage }, '*');
+  }
+  function getSelectedMode(){
+    const options = mode_options;
+    for (let i = 0; i < options.length; i++) {
+      if (options[i].checked) {
+        selectedOption = options[i].value;
+        break;
+      }
+    }
+    return selectedOption;
   }
   function getSeed() {
     function getRandomFullRangeInt() {

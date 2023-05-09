@@ -1,20 +1,26 @@
 const RENDER_MODEL_TYPE = "render";
 const INPAINT_MODEL_TYPE = "inpaint";
-const IDEAL_SIZE = 768;
+const DEFAULT_RENDER_MODEL="2.1/rmadaMergeSD21768_v70.safetensors [b346aa1648]";
+const DEFAULT_INPAINT_MODEL="1.5/Deliberate-inpainting.safetensors [cb15a7187a]";
+
+let IdealSize = 768;
+
 class Cache {
   type: string = "";
   api_key: string = "";
   url: string = "";
-  used_base_model: string = "2.1/rmadaMergeSD21768_v70.safetensors [b346aa1648]";
+  used_base_model: string = DEFAULT_RENDER_MODEL;
   control_net_for_sketch = "control_sd21_scribble-sd21-safe [6e34c018]";
-  model_type: string = RENDER_MODEL_TYPE;
+  current_model_type: string = RENDER_MODEL_TYPE;
+  selected_model_type: string = RENDER_MODEL_TYPE;
   prompt: string = "";
-  width: number = IDEAL_SIZE;
-  height: number = IDEAL_SIZE;
+  width: number = IdealSize;
+  height: number = IdealSize;
   style: string = "none";
   seed: string = "-1";
   step: number = 30;
   sampler: string = "Euler";
+  denoising_strength: number = 0.75;
   mask_only: boolean = false;
   vectors_guidance: number = 1;
   canny_high_threshold: number = 200;
@@ -47,7 +53,7 @@ class Settings extends Cache {
 }
 let settings = new Settings();
 let cache = new Cache();
-const default_bad_prompt = "nfixer,text, logo, signature, over-saturated, over-exposed, amateur, extra limbs, extra barrel, b&w, close-up, duplicate, mutilated, extra fingers, mutated hands, deformed, blurry, bad proportions, extra limbs, cloned face, out of frame, bad anatomy, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, mutated hands, fused fingers, too many fingers, long neck, tripod, tube, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, mutation, mutated, extra limbs, extra legs, extra arms, disfigured, deformed, cross-eye, body out of frame, blurry, bad art, bad anatomy, "
+const default_bad_prompt = "nfixer,bad_prompt_version2, EasyNegative,text, logo, signature, over-saturated, over-exposed, amateur, extra limbs, extra barrel, b&w, close-up, duplicate, mutilated, extra fingers, mutated hands, deformed, blurry, bad proportions, extra limbs, cloned face, out of frame, bad anatomy, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, mutated hands, fused fingers, too many fingers, long neck, tripod, tube, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, mutation, mutated, extra limbs, extra legs, extra arms, disfigured, deformed, cross-eye, body out of frame, blurry, bad art, bad anatomy, "
 figma.showUI(__html__, { width: 320, height: 720 });
 const archiveFigmaUiMessageHandler = async (msg: any) => {
   if (msg.type === "canny") {
@@ -119,13 +125,13 @@ const figmaUiMessageHandler = async (msg: Cache) => {
   const type = msg.type;
   try{
     cache.used_base_model = await get_loaded_model();
-    cache.model_type = get_model_type(cache.used_base_model);
+    cache.current_model_type = get_model_type(cache.used_base_model);
     switch (type) {
       case "check_availibility":
         await control_net_for_sketch_picker();
         break;
       case "txt2img":
-        if (cache.model_type !== RENDER_MODEL_TYPE) await select_model_type(RENDER_MODEL_TYPE);
+        if (cache.current_model_type !== RENDER_MODEL_TYPE) await select_model_type(RENDER_MODEL_TYPE);
         await txt2image();
         break;
       case "auto_mask":
@@ -135,18 +141,19 @@ const figmaUiMessageHandler = async (msg: Cache) => {
         await prompt_mask();
         break;
       case "change_selected":
-        if (cache.model_type !== RENDER_MODEL_TYPE) await select_model_type(RENDER_MODEL_TYPE);
+        if (cache.current_model_type !== RENDER_MODEL_TYPE) await select_model_type(RENDER_MODEL_TYPE);
         await change_selected();
         break;
       case "change_background":
-        if (cache.model_type !== INPAINT_MODEL_TYPE) await select_model_type(INPAINT_MODEL_TYPE);
+        if(cache.selected_model_type ===INPAINT_MODEL_TYPE)if (cache.current_model_type !== INPAINT_MODEL_TYPE) await select_model_type(INPAINT_MODEL_TYPE);
+        if(cache.selected_model_type !==RENDER_MODEL_TYPE) if (cache.current_model_type !== RENDER_MODEL_TYPE) await select_model_type(RENDER_MODEL_TYPE);
         await change_background();
         break;
       case "image_2_vectors":
         await image_2_vectors();
         break;
       case "vectors_2_image":
-        if (cache.model_type !== RENDER_MODEL_TYPE) await select_model_type(RENDER_MODEL_TYPE);
+        if (cache.current_model_type !== RENDER_MODEL_TYPE) await select_model_type(RENDER_MODEL_TYPE);
         await vectors_2_image();
         break;
       case "find_items":
@@ -225,10 +232,12 @@ function image_to_svg(base64: string) {
 async function select_model_type(model_type: string) {
   switch (model_type) {
     case INPAINT_MODEL_TYPE:
-      await change_model("1.5/Deliberate-inpainting.safetensors [cb15a7187a]")
+      IdealSize = 512;
+      await change_model(DEFAULT_INPAINT_MODEL)
       break
     case RENDER_MODEL_TYPE:
-      await change_model("2.1/rmadaMergeSD21768_v70.safetensors [b346aa1648]")
+      IdealSize = 768;
+      await change_model(DEFAULT_RENDER_MODEL)
       break
   }
   figma.ui.postMessage({ type: 'select_model_type', model_type: model_type });
@@ -310,12 +319,13 @@ async function prompt_mask() {
   create_image_node("prompt_mask", byte_array);
 }
 async function change_selected(){
-  await masked_img2img("change_selected",0.75,0,1);
+  await masked_img2img("change_selected",0,1);
 }
 async function change_background() {
-  await masked_img2img("change_background",1,1,3);
+  await masked_img2img("change_background",1,1);
+  // await masked_img2img("change_background",0.5,1,1);
 }
-async function masked_img2img(original_task: string,denoising_strength=1,inpainting_mask_invert=0,inpainting_fill=1) {
+async function masked_img2img(original_task: string,inpainting_mask_invert=0,inpainting_fill=1) {
   let prompt = get_styled_prompt(cache.prompt, cache.style);
   const snapshotSize={width:cache.width,height:cache.height};
   const selectedNode = figma.currentPage.selection[0];
@@ -326,14 +336,15 @@ async function masked_img2img(original_task: string,denoising_strength=1,inpaint
     maskUrl = await get_auto_mask(imageUrl, true);
   } else {
     const selectedMask = figma.currentPage.selection[1];
-    const uint8array = await extract_uint8array_from_image_node(selectedMask);
+    const uint8array = await extract_uint8array_from_image_node(selectedMask,selectedNode);
     maskUrl = await Uint8Array_to_base64(uint8array);
   }
+  if(cache.denoising_strength==1)inpainting_fill=3;
   let query: any = {
     "init_images": [imageUrl],
     "resize_mode": 0,
     "mask_blur": 1,
-    "denoising_strength": denoising_strength,
+    "denoising_strength": cache.denoising_strength,
     "mask": maskUrl,
     "inpainting_fill": inpainting_fill,
     "inpainting_mask_invert": inpainting_mask_invert,
@@ -353,26 +364,6 @@ async function masked_img2img(original_task: string,denoising_strength=1,inpaint
   });
   let data = await res.json();
   let base64 = data['images'][0];
-  query={
-    "init_images": [base64],
-    "resize_mode": 0,
-    "denoising_strength": 0.15,
-    "prompt": prompt,
-    "negative_prompt": default_bad_prompt,
-    "steps": cache.step,
-    "sampler_index": cache.sampler,
-    "cfg_scale": 7,
-    "width": snapshotSize.width,
-    "height": snapshotSize.height,
-    "seed": cache.seed,
-  }
-  res = await fetch(`${settings.url}/sdapi/v1/img2img`, {
-    method: 'POST',
-    headers: settings.getHeaders(),
-    body: JSON.stringify(query)
-  });
-  data = await res.json();
-  base64 = data['images'][0];
   const byte_array = await base64_to_Uint8Array(base64);
   create_image_node(original_task, byte_array, selectedNode.width, selectedNode.height);
 }
@@ -584,15 +575,15 @@ async function create_node_from_svg(original_task: string, svgstr: string, width
 function keep_aspect_ratio(width: number, height: number) {
   let ratio = 1;
   if (width > height) {
-    ratio = IDEAL_SIZE / height;
-    height = IDEAL_SIZE;
+    ratio = IdealSize / height;
+    height = IdealSize;
     width = width * ratio;
     const newHeight = width * (height / width);
     width = width;
     height = newHeight;
   } else {
-    ratio = IDEAL_SIZE / width;
-    width = IDEAL_SIZE;
+    ratio = IdealSize / width;
+    width = IdealSize;
     height = height * ratio;
     const newWidth = height * (width / height);
     height = height;
@@ -630,7 +621,7 @@ async function control_net_for_sketch_picker() {
   }
 }
 
-async function extract_uint8array_from_image_node(node: SceneNode) {
+async function extract_uint8array_from_image_node(node: SceneNode,refrenceNode:SceneNode|null=null) {
   const width = node.width;
   const height = node.height;
   let uint8array = null;
@@ -641,7 +632,7 @@ async function extract_uint8array_from_image_node(node: SceneNode) {
     node.type === "STAR" ||
     node.type === "VECTOR"
   ) {
-    node.resize(cache.width, cache.height);
+    node.resize(Math.floor(cache.width), Math.floor(cache.height));
     uint8array = await node.exportAsync({ format: "PNG", constraint: { type: "SCALE", value: 1 } });
     node.resize(width, height);
   } else {
