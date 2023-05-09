@@ -547,7 +547,7 @@
     const seed = getSeed();
     return {
       type, prompt, width, height, style, url, api_key, vectors_guidance, mask_only, seed, step, sampler,denoising_strength,
-      model,canny_high_threshold, canny_low_threshold
+      selected_model_type,canny_high_threshold, canny_low_threshold
     };
   }
   async function txt2img() {
@@ -727,6 +727,7 @@
   }
   function getSelectedMode(){
     const options = mode_options;
+    let selectedOption="render";
     for (let i = 0; i < options.length; i++) {
       if (options[i].checked) {
         selectedOption = options[i].value;
