@@ -115,13 +115,9 @@ const archiveFigmaUiMessageHandler = async (msg: any) => {
     figma.closePlugin();
 };
 const figmaUiMessageHandler = async (msg: Cache) => {
-  const size={width:cache.width,height:cache.height};
-  if(figma.currentPage.selection.length>0){
-    size.width=figma.currentPage.selection[0].width;
-    size.height=figma.currentPage.selection[0].height;
-  }
-  const merge = Object.assign({}, cache, msg, keep_aspect_ratio(size.width, size.height));
+  const merge = Object.assign({}, cache, msg);
   Object.assign(cache, merge)
+  recalculateCacheWidthHeight();
   const type = msg.type;
   try{
     cache.used_base_model = await get_loaded_model();
@@ -138,7 +134,7 @@ const figmaUiMessageHandler = async (msg: Cache) => {
         await auto_mask();
         break;
       case "prompt_mask":
-        await prompt_mask();
+        await prompt_mask();//model become selectable
         break;
       case "change_selected":
         if (cache.current_model_type !== RENDER_MODEL_TYPE) await select_model_type(RENDER_MODEL_TYPE);
@@ -233,10 +229,12 @@ async function select_model_type(model_type: string) {
   switch (model_type) {
     case INPAINT_MODEL_TYPE:
       IdealSize = 512;
+      recalculateCacheWidthHeight();
       await change_model(DEFAULT_INPAINT_MODEL)
       break
     case RENDER_MODEL_TYPE:
       IdealSize = 768;
+      recalculateCacheWidthHeight();
       await change_model(DEFAULT_RENDER_MODEL)
       break
   }
@@ -571,6 +569,15 @@ async function create_node_from_svg(original_task: string, svgstr: string, width
   node.resize(width, height);
   figma.currentPage.appendChild(node);
   figma.ui.postMessage({ original_task, type: 'done' });
+}
+function recalculateCacheWidthHeight() {
+  const size={width:cache.width,height:cache.height};
+  if(figma.currentPage.selection.length>0){
+    size.width=figma.currentPage.selection[0].width;
+    size.height=figma.currentPage.selection[0].height;
+  }
+  const merge = Object.assign({}, cache, keep_aspect_ratio(size.width, size.height));
+  Object.assign(cache, merge)
 }
 function keep_aspect_ratio(width: number, height: number) {
   let ratio = 1;
