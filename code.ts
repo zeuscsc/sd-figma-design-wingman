@@ -134,7 +134,7 @@ const figmaUiMessageHandler = async (msg: Cache) => {
         await auto_mask();
         break;
       case "prompt_mask":
-        await prompt_mask();//model become selectable
+        await prompt_mask();
         break;
       case "change_selected":
         if (cache.current_model_type !== RENDER_MODEL_TYPE) await select_model_type(RENDER_MODEL_TYPE);
