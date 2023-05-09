@@ -228,6 +228,11 @@
           </div>
           <label id="denoise_label" for="denoise_slider">Denoise: 0.75</label>
           <input type="range" id="denoise_slider" min="0" max="1" value="0.75" step="0.05">
+          <fieldset>
+            <legend>Choose a mode:</legend>
+            <div class="row"><input type="radio" id="render" name="mode" value="render"><label for="render">Render Mode</label></div>
+            <div class="row"><input type="radio" id="inpaint" name="mode" value="inpaint"><label for="inpaint">Inpaint Mode</label></div>
+          </fieldset>
         </fieldset>
         <fieldset>
           <legend>Remove Background</legend>
@@ -236,11 +241,6 @@
           <div class="row">
           </div>
           <label><input type="checkbox" class="checkbox" id="mask_only"><span>Mask Only</span></label>
-          <fieldset>
-            <legend>Choose a mode:</legend>
-            <div class="row"><input type="radio" id="render" name="mode" value="render"><label for="render">Render Mode</label></div>
-            <div class="row"><input type="radio" id="inpaint" name="mode" value="inpaint"><label for="inpaint">Inpaint Mode</label></div>
-          </fieldset>
         </fieldset>
       </div>
       <div class="row">
