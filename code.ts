@@ -393,9 +393,9 @@ async function vectors_2_image() {
         "args": [
           {
             "input_image": `data:image/png;base64,${imageUrl}`,
-            "module": "scribble",
+            "module": "none",
             "model": cache.control_net_for_sketch,
-            "guessmode": false,
+            // "guessmode": false,
             "weight": Number(cache.vectors_guidance),
           }
         ]
