@@ -715,7 +715,7 @@
     const url = url_input.value;
     const api_key = api_key_input.value;
     connectionStatusLabel.innerHTML = "Checking connection...";
-    sdServerAvailable = await apiHaveResponse(`${url}/app_id/`, { method: 'GET', headers: { Authorization: api_key } });
+    sdServerAvailable = await apiHaveResponse(`${url}/sdapi/v1/options`, { method: 'GET', headers: { Authorization: api_key } });
     autoMaskAvailable = await apiHaveResponse(`${url}/auto_mask/status`, { method: 'GET', headers: { Authorization: api_key } });
     figmaAvailable = await apiHaveResponse(`${url}/figma/status`, { method: 'GET', headers: { Authorization: api_key } });
     promptMaskAvailable = await apiHaveResponse(`${url}/prompt_mask/status`, { method: 'GET', headers: { Authorization: api_key } });

@@ -137,7 +137,8 @@ const figmaUiMessageHandler = async (msg: Cache) => {
         await prompt_mask();
         break;
       case "change_selected":
-        if (cache.current_model_type !== RENDER_MODEL_TYPE) await select_model_type(RENDER_MODEL_TYPE);
+        if(cache.selected_model_type ===INPAINT_MODEL_TYPE)if (cache.current_model_type !== INPAINT_MODEL_TYPE) await select_model_type(INPAINT_MODEL_TYPE);
+        if(cache.selected_model_type ===RENDER_MODEL_TYPE) if (cache.current_model_type !== RENDER_MODEL_TYPE) await select_model_type(RENDER_MODEL_TYPE);
         await change_selected();
         break;
       case "change_background":
@@ -317,7 +318,7 @@ async function prompt_mask() {
   create_image_node("prompt_mask", byte_array);
 }
 async function change_selected(){
-  await masked_img2img("change_selected",0,1);
+  await masked_img2img("change_selected",0,0);
 }
 async function change_background() {
   await masked_img2img("change_background",1,1);
